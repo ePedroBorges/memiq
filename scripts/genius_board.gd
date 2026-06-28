@@ -14,6 +14,8 @@ var enabled: bool = false
 var pulse: float = 0.0
 var rgb_hue: float = 0.0
 var style_id: String = "board_classic"
+var feedback: String = ""
+var feedback_alpha: float = 0.0
 
 
 func _ready() -> void:
@@ -25,6 +27,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	pulse = fposmod(pulse + delta * 2.8, TAU)
 	rgb_hue = fposmod(rgb_hue + delta * 0.08, 1.0)
+	if feedback_alpha > 0.0:
+		feedback_alpha = maxf(0.0, feedback_alpha - delta * 1.9)
+		if feedback_alpha <= 0.0:
+			feedback = ""
 	queue_redraw()
 
 
@@ -58,6 +64,12 @@ func flash_pad(index: int, seconds: float = 0.32) -> void:
 		queue_redraw()
 
 
+func show_feedback(kind: String) -> void:
+	feedback = kind
+	feedback_alpha = 1.0
+	queue_redraw()
+
+
 func set_style(id: String) -> void:
 	style_id = id
 	queue_redraw()
@@ -76,10 +88,21 @@ func _draw() -> void:
 	draw_arc(center, radius + 27.0, 0.0, TAU, 180, Color.from_hsv(fposmod(rgb_hue + 0.34, 1.0), 0.86, 1.0, 0.18), 5.0, true)
 	draw_arc(center, radius - 2.0, 0.0, TAU, 180, Color(1.0, 1.0, 1.0, 0.055), 2.0, true)
 
+	if feedback_alpha > 0.0:
+		var feedback_color: Color = Color(0.18, 1.0, 0.46, 0.24 * feedback_alpha)
+		if feedback == "error":
+			feedback_color = Color(1.0, 0.06, 0.08, 0.3 * feedback_alpha)
+		draw_circle(center, radius + 36.0 + sin(pulse * 2.0) * 8.0, feedback_color)
+		draw_arc(center, radius + 34.0, 0.0, TAU, 180, Color(feedback_color.r, feedback_color.g, feedback_color.b, minf(0.9, feedback_alpha)), 12.0, true)
+
 	for index in range(4):
 		var color: Color = _pad_color(index)
 		var brightness: float = 0.5
-		if active_pad == index:
+		if feedback_alpha > 0.0 and feedback == "success":
+			brightness = 1.05
+		elif feedback_alpha > 0.0 and feedback == "error":
+			brightness = 0.22 + sin(pulse * 7.0) * 0.12
+		elif active_pad == index:
 			brightness = 1.22
 		elif enabled:
 			brightness = 0.72
@@ -227,6 +250,30 @@ func _pad_color(index: int) -> Color:
 			Color(0.14, 0.24, 0.92),
 		]
 		return void_colors[index]
+	if style_id == "board_crystal":
+		var crystal_colors: Array[Color] = [
+			Color(0.0, 0.9, 0.9),
+			Color(1.0, 0.22, 0.72),
+			Color(0.92, 1.0, 0.2),
+			Color(0.24, 0.55, 1.0),
+		]
+		return crystal_colors[index]
+	if style_id == "board_midnight":
+		var midnight_colors: Array[Color] = [
+			Color(0.08, 0.62, 0.38),
+			Color(0.74, 0.08, 0.14),
+			Color(0.85, 0.66, 0.04),
+			Color(0.1, 0.22, 0.78),
+		]
+		return midnight_colors[index]
+	if style_id == "board_candy":
+		var candy_colors: Array[Color] = [
+			Color(0.22, 1.0, 0.58),
+			Color(1.0, 0.38, 0.58),
+			Color(1.0, 0.86, 0.25),
+			Color(0.36, 0.72, 1.0),
+		]
+		return candy_colors[index]
 
 	return PAD_COLORS[index]
 
@@ -238,5 +285,11 @@ func _style_hue_shift() -> float:
 		return 0.1
 	if style_id == "board_void":
 		return 0.55
+	if style_id == "board_crystal":
+		return 0.48
+	if style_id == "board_midnight":
+		return 0.63
+	if style_id == "board_candy":
+		return 0.93
 
 	return 0.0

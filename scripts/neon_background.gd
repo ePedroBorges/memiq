@@ -2,6 +2,7 @@ extends Control
 
 var time: float = 0.0
 var theme_id: String = "bg_neon"
+var light_mode: bool = false
 
 
 func _ready() -> void:
@@ -16,6 +17,11 @@ func _process(delta: float) -> void:
 
 func set_theme_id(id: String) -> void:
 	theme_id = id
+	queue_redraw()
+
+
+func set_light_mode(value: bool) -> void:
+	light_mode = value
 	queue_redraw()
 
 
@@ -53,6 +59,16 @@ func _draw() -> void:
 
 
 func _palette() -> Dictionary:
+	if light_mode:
+		return {
+			"base": Color(0.9, 0.96, 1.0, 1.0),
+			"scan": Color(0.0, 0.48, 0.86, 0.1),
+			"grid": Color(0.0, 0.34, 0.58, 0.13),
+			"glow_a": Color(0.0, 0.55, 1.0, 0.075),
+			"glow_b": Color(1.0, 0.62, 0.0, 0.055),
+			"hue": 0.55,
+		}
+
 	if theme_id == "bg_aurora":
 		return {
 			"base": Color(0.004, 0.012, 0.024, 1.0),
@@ -79,6 +95,33 @@ func _palette() -> Dictionary:
 			"glow_a": Color(0.18, 0.0, 0.75, 0.04),
 			"glow_b": Color(0.0, 0.7, 1.0, 0.03),
 			"hue": 0.68,
+		}
+	if theme_id == "bg_cyber":
+		return {
+			"base": Color(0.006, 0.014, 0.028, 1.0),
+			"scan": Color(0.0, 0.85, 1.0, 0.12),
+			"grid": Color(0.0, 0.48, 0.68, 0.14),
+			"glow_a": Color(0.0, 0.8, 1.0, 0.04),
+			"glow_b": Color(0.85, 0.95, 1.0, 0.026),
+			"hue": 0.53,
+		}
+	if theme_id == "bg_arcade":
+		return {
+			"base": Color(0.02, 0.004, 0.018, 1.0),
+			"scan": Color(1.0, 0.86, 0.0, 0.1),
+			"grid": Color(0.45, 0.08, 0.28, 0.15),
+			"glow_a": Color(1.0, 0.04, 0.42, 0.035),
+			"glow_b": Color(0.0, 0.65, 1.0, 0.032),
+			"hue": 0.9,
+		}
+	if theme_id == "bg_lime":
+		return {
+			"base": Color(0.006, 0.018, 0.012, 1.0),
+			"scan": Color(0.72, 1.0, 0.12, 0.11),
+			"grid": Color(0.18, 0.42, 0.16, 0.14),
+			"glow_a": Color(0.54, 1.0, 0.08, 0.035),
+			"glow_b": Color(0.0, 0.82, 0.64, 0.03),
+			"hue": 0.28,
 		}
 
 	return {

@@ -2,24 +2,24 @@
 
 Jogo da memoria estilo Genius feito em Godot para Android.
 
-## Modos
+## Modo
 
-- Aventura: progressao por fase com XP, nivel e recompensas desbloqueaveis.
-- Infinito: sequencia infinita que acelera aos poucos e possui recorde proprio.
-- Recorde do Infinito, progresso da Aventura, conquistas e recompensas salvos localmente em `user://memiq_scores.cfg`.
-- Conquistas offline com requisitos visiveis no menu.
-- Recompensas da Aventura incluem novos fundos e novos estilos do circulo Genius.
+- Infinito: sequencia infinita que acelera aos poucos, com recorde, XP, niveis e recompensas.
+- Recorde, progresso, conquistas, recompensas, customizacao e audio salvos localmente em `user://memiq_scores.cfg`.
+- Menu principal com `INFINITO`, `CUSTOMIZACAO`, `CONQUISTAS` e `RECOMPENSAS`.
+- Conquistas offline com requisitos visiveis em tela propria.
+- Recompensas incluem fundos e estilos do circulo Genius.
+- Durante a partida ha opcoes para remover audio e voltar ao menu.
 
 ## Visual
 
 - Tema escuro.
 - Tela inicial com `assets/anchorlab.png`, centralizada e adaptada ao tamanho do dispositivo.
-- Tabuleiro circular inspirado no Genius classico.
+- Tabuleiro circular inspirado no Genius classico, com luzes de acerto e erro.
 - Iluminacao RGB animada ao redor do tabuleiro.
 - Menus com fundo neon animado, botoes luminosos e listas rolaveis.
 - Layout responsivo para celular e desktop, com escala dinamica de tabuleiro, botoes e fontes.
-- Menu principal minimalista com apenas `AVENTURA` e `INFINITO`.
-- Logo `MEMIQ` no topo do menu, modos na parte inferior e acesso a conquistas abaixo dos modos.
+- Logo `MEMIQ` e opcoes mais centralizados na tela inicial.
 - Fundos e estilos visuais mudam conforme recompensas desbloqueadas.
 - Icone do APK em `assets/icon.png`, copiado de `base_genius/src/icon.png`.
 

@@ -1,5 +1,7 @@
 extends Node
 
+signal data_changed
+
 const SAVE_PATH: String = "user://memiq_scores.cfg"
 
 var best_survival: int = 0
@@ -15,6 +17,21 @@ var selected_background: String = "bg_neon"
 var selected_board_style: String = "board_classic"
 var audio_muted: bool = false
 var visual_theme: String = "dark"
+var display_name: String = "Jogador MEMIQ"
+var avatar_id: String = "avatar_neon"
+var banner_id: String = "banner_grid"
+var name_style: String = "style_default"
+var featured_achievement: String = ""
+var gold: int = 0
+var diamonds: int = 0
+var multiplayer_rating: int = 1000
+var rank_name: String = "Bronze"
+var multiplayer_wins: int = 0
+var multiplayer_losses: int = 0
+var multiplayer_loss_streak: int = 0
+var multiplayer_win_streak: int = 0
+var monthly_completed_phases: Dictionary = {}
+var purchased_items: Dictionary = {}
 
 
 func _ready() -> void:
@@ -39,8 +56,23 @@ func load_scores() -> void:
 	selected_board_style = String(config.get_value("rewards", "selected_board_style", "board_classic"))
 	audio_muted = bool(config.get_value("settings", "audio_muted", false))
 	visual_theme = String(config.get_value("settings", "visual_theme", "dark"))
+	display_name = String(config.get_value("profile", "display_name", "Jogador MEMIQ"))
+	avatar_id = String(config.get_value("profile", "avatar_id", "avatar_neon"))
+	banner_id = String(config.get_value("profile", "banner_id", "banner_grid"))
+	name_style = String(config.get_value("profile", "name_style", "style_default"))
+	featured_achievement = String(config.get_value("profile", "featured_achievement", ""))
+	gold = int(config.get_value("wallet", "gold", 0))
+	diamonds = int(config.get_value("wallet", "diamonds", 0))
+	multiplayer_rating = int(config.get_value("multiplayer", "rating", 1000))
+	rank_name = String(config.get_value("multiplayer", "rank_name", _rank_for_rating(multiplayer_rating)))
+	multiplayer_wins = int(config.get_value("multiplayer", "wins", 0))
+	multiplayer_losses = int(config.get_value("multiplayer", "losses", 0))
+	multiplayer_loss_streak = int(config.get_value("multiplayer", "loss_streak", 0))
+	multiplayer_win_streak = int(config.get_value("multiplayer", "win_streak", 0))
 	unlocked_achievements.clear()
 	unlocked_rewards.clear()
+	monthly_completed_phases.clear()
+	purchased_items.clear()
 
 	if config.has_section("achievements"):
 		for key in config.get_section_keys("achievements"):
@@ -49,6 +81,14 @@ func load_scores() -> void:
 	if config.has_section("rewards_unlocked"):
 		for key in config.get_section_keys("rewards_unlocked"):
 			unlocked_rewards[String(key)] = bool(config.get_value("rewards_unlocked", key, false))
+
+	if config.has_section("monthly_phases"):
+		for key in config.get_section_keys("monthly_phases"):
+			monthly_completed_phases[String(key)] = bool(config.get_value("monthly_phases", key, false))
+
+	if config.has_section("purchased_items"):
+		for key in config.get_section_keys("purchased_items"):
+			purchased_items[String(key)] = bool(config.get_value("purchased_items", key, false))
 
 	_ensure_default_rewards()
 
@@ -66,6 +106,19 @@ func save_scores() -> void:
 	config.set_value("rewards", "selected_board_style", selected_board_style)
 	config.set_value("settings", "audio_muted", audio_muted)
 	config.set_value("settings", "visual_theme", visual_theme)
+	config.set_value("profile", "display_name", display_name)
+	config.set_value("profile", "avatar_id", avatar_id)
+	config.set_value("profile", "banner_id", banner_id)
+	config.set_value("profile", "name_style", name_style)
+	config.set_value("profile", "featured_achievement", featured_achievement)
+	config.set_value("wallet", "gold", gold)
+	config.set_value("wallet", "diamonds", diamonds)
+	config.set_value("multiplayer", "rating", multiplayer_rating)
+	config.set_value("multiplayer", "rank_name", rank_name)
+	config.set_value("multiplayer", "wins", multiplayer_wins)
+	config.set_value("multiplayer", "losses", multiplayer_losses)
+	config.set_value("multiplayer", "loss_streak", multiplayer_loss_streak)
+	config.set_value("multiplayer", "win_streak", multiplayer_win_streak)
 
 	for id in unlocked_achievements.keys():
 		config.set_value("achievements", String(id), bool(unlocked_achievements[id]))
@@ -73,7 +126,14 @@ func save_scores() -> void:
 	for id in unlocked_rewards.keys():
 		config.set_value("rewards_unlocked", String(id), bool(unlocked_rewards[id]))
 
+	for id in monthly_completed_phases.keys():
+		config.set_value("monthly_phases", String(id), bool(monthly_completed_phases[id]))
+
+	for id in purchased_items.keys():
+		config.set_value("purchased_items", String(id), bool(purchased_items[id]))
+
 	config.save(SAVE_PATH)
+	data_changed.emit()
 
 
 func record_survival(score: int) -> bool:
@@ -94,6 +154,7 @@ func record_survival(score: int) -> bool:
 		new_record = true
 
 	if changed:
+		gold += 8 + score
 		save_scores()
 
 	return new_record
@@ -167,6 +228,155 @@ func set_visual_theme(value: String) -> void:
 	save_scores()
 
 
+func update_profile(new_name: String, new_avatar: String, new_banner: String, new_style: String, new_featured_achievement: String) -> void:
+	display_name = new_name.strip_edges()
+	if display_name == "":
+		display_name = "Jogador MEMIQ"
+	avatar_id = new_avatar
+	banner_id = new_banner
+	name_style = new_style
+	featured_achievement = new_featured_achievement
+	save_scores()
+
+
+func add_currency(gold_amount: int, diamond_amount: int = 0) -> void:
+	gold = maxi(0, gold + gold_amount)
+	diamonds = maxi(0, diamonds + diamond_amount)
+	save_scores()
+
+
+func purchase_item(id: String, currency: String, cost: int) -> bool:
+	if bool(purchased_items.get(id, false)):
+		return true
+	if currency == "gold":
+		if gold < cost:
+			return false
+		gold -= cost
+	elif currency == "diamonds":
+		if diamonds < cost:
+			return false
+		diamonds -= cost
+	else:
+		return false
+	purchased_items[id] = true
+	save_scores()
+	return true
+
+
+func is_item_purchased(id: String) -> bool:
+	return bool(purchased_items.get(id, false))
+
+
+func record_multiplayer_result(won: bool, opponent_rating: int = 1000) -> int:
+	var previous_rating: int = multiplayer_rating
+	var delta: int = 20 + clampi(int((opponent_rating - multiplayer_rating) / 50), -8, 12)
+	var old_rank: String = _rank_for_rating(multiplayer_rating)
+	if won:
+		multiplayer_wins += 1
+		multiplayer_win_streak += 1
+		multiplayer_loss_streak = 0
+		multiplayer_rating += maxi(12, delta)
+		gold += 35
+	else:
+		multiplayer_losses += 1
+		multiplayer_loss_streak += 1
+		multiplayer_win_streak = 0
+		var protected_loss: bool = old_rank in ["Bronze", "Prata"] and multiplayer_loss_streak < 2
+		if not protected_loss:
+			multiplayer_rating -= _loss_penalty_for_rank(old_rank)
+		gold += 12
+	multiplayer_rating = maxi(0, multiplayer_rating)
+	rank_name = _rank_for_rating(multiplayer_rating)
+	save_scores()
+	return multiplayer_rating - previous_rating
+
+
+func complete_monthly_phase(month_key: String, phase_number: int) -> Dictionary:
+	var key: String = "%s_%02d" % [month_key, phase_number]
+	if bool(monthly_completed_phases.get(key, false)):
+		return {"gold": 0, "diamonds": 0, "item": ""}
+	monthly_completed_phases[key] = true
+	var reward_gold: int = 20 + phase_number * 2
+	var reward_diamonds: int = 5 if phase_number == 30 else 0
+	var reward_item: String = "banner_%s" % month_key if phase_number == 30 else ""
+	gold += reward_gold
+	diamonds += reward_diamonds
+	if reward_item != "":
+		purchased_items[reward_item] = true
+	save_scores()
+	return {"gold": reward_gold, "diamonds": reward_diamonds, "item": reward_item}
+
+
+func monthly_phase_completed(month_key: String, phase_number: int) -> bool:
+	return bool(monthly_completed_phases.get("%s_%02d" % [month_key, phase_number], false))
+
+
+func to_cloud_payload() -> Dictionary:
+	return {
+		"best_survival": best_survival,
+		"best_survival_level": best_survival_level,
+		"survival_level": survival_level,
+		"survival_xp": survival_xp,
+		"best_overall": best_overall,
+		"games_played": games_played,
+		"survival_runs": survival_runs,
+		"unlocked_achievements": unlocked_achievements,
+		"unlocked_rewards": unlocked_rewards,
+		"selected_background": selected_background,
+		"selected_board_style": selected_board_style,
+		"audio_muted": audio_muted,
+		"visual_theme": visual_theme,
+		"display_name": display_name,
+		"avatar_id": avatar_id,
+		"banner_id": banner_id,
+		"name_style": name_style,
+		"featured_achievement": featured_achievement,
+		"gold": gold,
+		"diamonds": diamonds,
+		"multiplayer_rating": multiplayer_rating,
+		"rank_name": rank_name,
+		"multiplayer_wins": multiplayer_wins,
+		"multiplayer_losses": multiplayer_losses,
+		"multiplayer_loss_streak": multiplayer_loss_streak,
+		"multiplayer_win_streak": multiplayer_win_streak,
+		"monthly_completed_phases": monthly_completed_phases,
+		"purchased_items": purchased_items
+	}
+
+
+func apply_cloud_payload(payload: Dictionary) -> void:
+	best_survival = maxi(best_survival, int(payload.get("best_survival", best_survival)))
+	best_survival_level = maxi(best_survival_level, int(payload.get("best_survival_level", best_survival_level)))
+	survival_level = maxi(survival_level, int(payload.get("survival_level", survival_level)))
+	survival_xp = maxi(survival_xp, int(payload.get("survival_xp", survival_xp)))
+	best_overall = maxi(best_overall, int(payload.get("best_overall", best_overall)))
+	games_played = maxi(games_played, int(payload.get("games_played", games_played)))
+	survival_runs = maxi(survival_runs, int(payload.get("survival_runs", survival_runs)))
+	selected_background = String(payload.get("selected_background", selected_background))
+	selected_board_style = String(payload.get("selected_board_style", selected_board_style))
+	audio_muted = bool(payload.get("audio_muted", audio_muted))
+	visual_theme = String(payload.get("visual_theme", visual_theme))
+	display_name = String(payload.get("display_name", display_name))
+	avatar_id = String(payload.get("avatar_id", avatar_id))
+	banner_id = String(payload.get("banner_id", banner_id))
+	name_style = String(payload.get("name_style", name_style))
+	featured_achievement = String(payload.get("featured_achievement", featured_achievement))
+	gold = maxi(gold, int(payload.get("gold", gold)))
+	diamonds = maxi(diamonds, int(payload.get("diamonds", diamonds)))
+	multiplayer_rating = int(payload.get("multiplayer_rating", multiplayer_rating))
+	rank_name = String(payload.get("rank_name", _rank_for_rating(multiplayer_rating)))
+	multiplayer_wins = maxi(multiplayer_wins, int(payload.get("multiplayer_wins", multiplayer_wins)))
+	multiplayer_losses = maxi(multiplayer_losses, int(payload.get("multiplayer_losses", multiplayer_losses)))
+	multiplayer_loss_streak = int(payload.get("multiplayer_loss_streak", multiplayer_loss_streak))
+	multiplayer_win_streak = int(payload.get("multiplayer_win_streak", multiplayer_win_streak))
+	_merge_dictionary(unlocked_achievements, payload.get("unlocked_achievements", {}))
+	_merge_dictionary(unlocked_rewards, payload.get("unlocked_rewards", {}))
+	_merge_dictionary(monthly_completed_phases, payload.get("monthly_completed_phases", {}))
+	_merge_dictionary(purchased_items, payload.get("purchased_items", {}))
+	_ensure_default_rewards()
+	save_scores()
+
+
 func is_light_theme() -> bool:
 	return visual_theme == "light"
 
@@ -187,8 +397,38 @@ func unlocked_reward_count() -> int:
 func _ensure_default_rewards() -> void:
 	unlocked_rewards["bg_neon"] = true
 	unlocked_rewards["board_classic"] = true
+	purchased_items["avatar_neon"] = true
+	purchased_items["banner_grid"] = true
+	purchased_items["style_default"] = true
 
 	if selected_background == "":
 		selected_background = "bg_neon"
 	if selected_board_style == "":
 		selected_board_style = "board_classic"
+
+
+func _rank_for_rating(rating: int) -> String:
+	if rating >= 2200:
+		return "Lendario"
+	if rating >= 1800:
+		return "Diamante"
+	if rating >= 1500:
+		return "Ouro"
+	if rating >= 1250:
+		return "Prata"
+	return "Bronze"
+
+
+func _loss_penalty_for_rank(current_rank: String) -> int:
+	if current_rank in ["Diamante", "Lendario"]:
+		return 28
+	if current_rank == "Ouro":
+		return 22
+	return 16
+
+
+func _merge_dictionary(target: Dictionary, value: Variant) -> void:
+	if not (value is Dictionary):
+		return
+	for key in value.keys():
+		target[String(key)] = value[key]

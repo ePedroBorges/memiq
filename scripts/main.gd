@@ -33,6 +33,17 @@ const REWARDS: Array[Dictionary] = [
 	{"id": "bg_lime", "kind": "background", "name": "Fundo Lime Pulse", "requirement": "Alcance o nivel 15", "level": 15},
 	{"id": "board_midnight", "kind": "board", "name": "Genius Midnight", "requirement": "Alcance o nivel 16", "level": 16},
 ]
+const SHOP_ITEMS: Array[Dictionary] = [
+	{"id": "avatar_neon", "kind": "avatar", "name": "Avatar Neon", "currency": "gold", "cost": 0},
+	{"id": "avatar_prisma", "kind": "avatar", "name": "Avatar Prisma", "currency": "gold", "cost": 450},
+	{"id": "avatar_diamante", "kind": "avatar", "name": "Avatar Diamante", "currency": "diamonds", "cost": 80},
+	{"id": "banner_grid", "kind": "banner", "name": "Banner Grid", "currency": "gold", "cost": 0},
+	{"id": "banner_temporada", "kind": "banner", "name": "Banner Temporada", "currency": "gold", "cost": 700},
+	{"id": "banner_luxo", "kind": "banner", "name": "Banner Luxo", "currency": "diamonds", "cost": 120},
+	{"id": "style_default", "kind": "name_style", "name": "Nome Padrao", "currency": "gold", "cost": 0},
+	{"id": "style_gold", "kind": "name_style", "name": "Nome Dourado", "currency": "gold", "cost": 950},
+	{"id": "style_diamond", "kind": "name_style", "name": "Nome Diamante", "currency": "diamonds", "cost": 150},
+]
 
 var flash_time: float = 0.46
 var sequence: Array[int] = []
@@ -331,21 +342,80 @@ func _show_menu() -> void:
 	_apply_unlocked_visuals()
 	root_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	top_bar.visible = false
-	content_scroll.visible = false
-	action_row.visible = true
+	content_scroll.visible = true
+	action_row.visible = false
 	board.visible = false
 	board.enabled = false
 	title_label.visible = false
 	subtitle_label.visible = false
 	score_label.visible = false
 	status_label.visible = false
+	content_box.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	action_row.add_child(_make_button("INFINITO", _start_survival))
-	action_row.add_child(_make_button("CUSTOMIZACAO", _show_customization))
-	action_row.add_child(_make_button("CONFIGURACOES", _show_settings))
-	action_row.add_child(_make_button("CONQUISTAS  %d/%d" % [_achievement_count(), ACHIEVEMENTS.size()], _show_achievements))
-	action_row.add_child(_make_button("RECOMPENSAS  %d/%d" % [ScoreStore.unlocked_reward_count(), REWARDS.size()], _show_rewards))
+	content_box.add_child(_make_button("MODOS DE JOGO", _show_game_modes))
+	content_box.add_child(_make_button("PERFIL", _show_profile))
+	content_box.add_child(_make_button("LOJA", _show_shop))
+	content_box.add_child(_make_button("CONFIGURACOES", _show_settings))
 	_apply_interface_theme()
+	_apply_responsive_layout()
+
+
+func _show_game_modes() -> void:
+	_show_collection_screen("MODOS DE JOGO", "Escolha como jogar", "Temporadas ranqueadas, fases mensais e modos locais.")
+	content_box.add_child(_make_button("MULTIPLAYER LOCAL", _show_local_multiplayer))
+	content_box.add_child(_make_button("MULTIPLAYER", _show_multiplayer))
+	content_box.add_child(_make_button("INFINITO", _start_survival))
+	content_box.add_child(_make_button("FASES", _show_monthly_phases))
+	_apply_responsive_layout()
+
+
+func _show_local_multiplayer() -> void:
+	_show_collection_screen("MULTIPLAYER LOCAL", "Rede Wi-Fi local", "Preparado para partidas em LAN. O salvamento de historico usa a conta conectada.")
+	content_box.add_child(_make_section_label("STATUS"))
+	content_box.add_child(_make_info_card("Crie ou entre em uma sala na mesma rede Wi-Fi. A camada online esta separada para receber o protocolo de host/cliente sem mexer no progresso."))
+	content_box.add_child(_make_button("CRIAR SALA LOCAL", Callable(self, "_show_unavailable_notice").bind("Host local preparado para proxima etapa de rede.")))
+	content_box.add_child(_make_button("ENTRAR EM SALA", Callable(self, "_show_unavailable_notice").bind("Entrada por IP/codigo preparada para proxima etapa de rede.")))
+	_apply_responsive_layout()
+
+
+func _show_multiplayer() -> void:
+	_show_collection_screen("MULTIPLAYER", "Temporada atual: %s" % _season_label(), "Rank por vitorias e derrotas. Bronze/Prata perdem pontos depois de 2 derrotas seguidas; Ouro+ perde na primeira derrota.")
+	content_box.add_child(_make_info_card("Patente: %s\nPontuacao: %d\nVitorias: %d  Derrotas: %d\nSequencia de derrotas: %d" % [ScoreStore.rank_name, ScoreStore.multiplayer_rating, ScoreStore.multiplayer_wins, ScoreStore.multiplayer_losses, ScoreStore.multiplayer_loss_streak]))
+	content_box.add_child(_make_button("BUSCAR PARTIDA", Callable(self, "_show_unavailable_notice").bind("Matchmaking online preparado para integrar com Supabase Realtime/servidor de partidas.")))
+	content_box.add_child(_make_button("REGISTRAR VITORIA DE TESTE", Callable(self, "_record_multiplayer_result").bind(true)))
+	content_box.add_child(_make_button("REGISTRAR DERROTA DE TESTE", Callable(self, "_record_multiplayer_result").bind(false)))
+	content_box.add_child(_make_button("RANKING", _show_leaderboard))
+	_apply_responsive_layout()
+
+
+func _show_monthly_phases() -> void:
+	var month_key: String = _month_key()
+	_show_collection_screen("FASES", "Mes %s: 30 fases" % month_key, "Atualiza mensalmente. Recompensas: ouro, diamantes e item especial ao completar a fase 30.")
+	for phase in range(1, 31):
+		var label: String = "FASE %02d" % phase
+		if ScoreStore.monthly_phase_completed(month_key, phase):
+			label += "  // COMPLETA"
+		content_box.add_child(_make_button(label, Callable(self, "_complete_phase").bind(phase)))
+	_apply_responsive_layout()
+
+
+func _show_profile() -> void:
+	_show_collection_screen("PERFIL", ScoreStore.display_name, "Conta, visual, conquistas, recompensas, amigos e historico.")
+	content_box.add_child(_make_info_card("Conta: %s\nAvatar: %s\nBanner: %s\nNome: %s\nOuro: %d  Diamantes: %d\nPatente: %s (%d)" % [SupabaseClient.auth_label(), ScoreStore.avatar_id, ScoreStore.banner_id, ScoreStore.name_style, ScoreStore.gold, ScoreStore.diamonds, ScoreStore.rank_name, ScoreStore.multiplayer_rating]))
+	content_box.add_child(_make_button("CONTA E NUVEM", _show_account))
+	content_box.add_child(_make_button("EDITAR PERFIL", _show_profile_editor))
+	content_box.add_child(_make_button("CUSTOMIZACAO", _show_customization))
+	content_box.add_child(_make_button("CONQUISTAS  %d/%d" % [_achievement_count(), ACHIEVEMENTS.size()], _show_achievements))
+	content_box.add_child(_make_button("RECOMPENSAS  %d/%d" % [ScoreStore.unlocked_reward_count(), REWARDS.size()], _show_rewards))
+	content_box.add_child(_make_button("AMIGOS", _show_friends))
+	content_box.add_child(_make_button("HISTORICO DE PARTIDAS", _show_match_history))
+	_apply_responsive_layout()
+
+
+func _show_shop() -> void:
+	_show_collection_screen("LOJA", "Ouro %d  // Diamantes %d" % [ScoreStore.gold, ScoreStore.diamonds], "Ouro vem das partidas. Diamantes ficam prontos para compra com dinheiro real.")
+	for item in SHOP_ITEMS:
+		content_box.add_child(_make_shop_card(item))
 	_apply_responsive_layout()
 
 
@@ -386,6 +456,78 @@ func _show_settings() -> void:
 	_apply_responsive_layout()
 
 
+func _show_account() -> void:
+	_show_collection_screen("CONTA E NUVEM", SupabaseClient.auth_label(), "Entre para salvar progresso, perfil, ranking e historico na nuvem.")
+	if not SupabaseClient.is_configured():
+		content_box.add_child(_make_info_card("Envie a URL do projeto Supabase e a chave publica anon/publishable para eu configurar no codigo."))
+		return
+	if SupabaseClient.is_signed_in():
+		content_box.add_child(_make_button("SINCRONIZAR AGORA", _sync_cloud_now))
+		content_box.add_child(_make_button("SAIR DA CONTA", _sign_out_cloud))
+		return
+	content_box.add_child(_make_button("ENTRAR COMO ANONIMO", _sign_in_anonymous))
+	var email_input: LineEdit = LineEdit.new()
+	email_input.placeholder_text = "email"
+	email_input.custom_minimum_size = Vector2(320, 54)
+	content_box.add_child(email_input)
+	var password_input: LineEdit = LineEdit.new()
+	password_input.placeholder_text = "senha"
+	password_input.secret = true
+	password_input.custom_minimum_size = Vector2(320, 54)
+	content_box.add_child(password_input)
+	content_box.add_child(_make_button("CRIAR CONTA", Callable(self, "_create_account_from_fields").bind(email_input, password_input)))
+	content_box.add_child(_make_button("ENTRAR", Callable(self, "_login_from_fields").bind(email_input, password_input)))
+	_apply_responsive_layout()
+
+
+func _show_profile_editor() -> void:
+	_show_collection_screen("EDITAR PERFIL", ScoreStore.display_name, "Escolha itens comprados ou liberados.")
+	var name_input: LineEdit = LineEdit.new()
+	name_input.text = ScoreStore.display_name
+	name_input.placeholder_text = "nome do jogador"
+	name_input.custom_minimum_size = Vector2(320, 54)
+	content_box.add_child(name_input)
+	content_box.add_child(_make_section_label("AVATAR"))
+	_add_profile_item_buttons("avatar", name_input)
+	content_box.add_child(_make_section_label("BANNER"))
+	_add_profile_item_buttons("banner", name_input)
+	content_box.add_child(_make_section_label("ESTILO DO NOME"))
+	_add_profile_item_buttons("name_style", name_input)
+	_apply_responsive_layout()
+
+
+func _show_friends() -> void:
+	_show_collection_screen("AMIGOS", "Convites e partidas", "Estrutura de amigos pronta no banco. Convites online entram na etapa de Realtime/matchmaking.")
+	content_box.add_child(_make_info_card("Voce podera adicionar amigos, aceitar convites e chamar para partidas. As tabelas e policies estao no SQL incluido."))
+	content_box.add_child(_make_button("ADICIONAR AMIGO", Callable(self, "_show_unavailable_notice").bind("Busca por jogador sera ligada ao Supabase apos configurar o projeto.")))
+	_apply_responsive_layout()
+
+
+func _show_match_history() -> void:
+	_show_collection_screen("HISTORICO", "Ultimas partidas", "Historico local e em nuvem quando conectado.")
+	if not SupabaseClient.is_signed_in():
+		content_box.add_child(_make_info_card("Entre em uma conta para carregar o historico salvo no Supabase."))
+		_apply_responsive_layout()
+		return
+	var rows: Array = await SupabaseClient.fetch_match_history()
+	if rows.is_empty():
+		content_box.add_child(_make_info_card("Nenhuma partida online registrada ainda."))
+	for row in rows:
+		content_box.add_child(_make_info_card("%s  // %s\nPlacar: %s x %s\nPatente apos partida: %s" % [String(row.get("mode", "partida")), String(row.get("result", "")), str(row.get("player_score", 0)), str(row.get("opponent_score", 0)), String(row.get("rank_after", ""))]))
+	_apply_responsive_layout()
+
+
+func _show_leaderboard() -> void:
+	_show_collection_screen("RANKING", "Top jogadores", "Ordenado por pontuacao multiplayer.")
+	var rows: Array = await SupabaseClient.fetch_leaderboard()
+	if rows.is_empty():
+		content_box.add_child(_make_info_card("Ranking indisponivel ate configurar Supabase e jogar partidas ranqueadas."))
+	for index in range(rows.size()):
+		var row: Dictionary = rows[index]
+		content_box.add_child(_make_info_card("#%d  %s\n%s pontos  // %s" % [index + 1, String(row.get("display_name", "Jogador")), str(row.get("multiplayer_rating", 0)), String(row.get("rank_name", ""))]))
+	_apply_responsive_layout()
+
+
 func _show_collection_screen(screen_title: String, screen_subtitle: String, detail: String) -> void:
 	session_id += 1
 	screen_state = "collection"
@@ -405,6 +547,9 @@ func _show_collection_screen(screen_title: String, screen_subtitle: String, deta
 	title_label.text = screen_title
 	subtitle_label.text = screen_subtitle
 	status_label.text = detail
+	content_scroll.scroll_vertical = 0
+	content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_box.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_apply_interface_theme()
 
 
@@ -534,6 +679,70 @@ func _finish_game() -> void:
 	result_bottom_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_box.add_child(result_bottom_spacer)
 	_apply_responsive_layout()
+
+
+func _sign_in_anonymous() -> void:
+	await SupabaseClient.sign_in_anonymous()
+	_show_account()
+
+
+func _create_account_from_fields(email_input: LineEdit, password_input: LineEdit) -> void:
+	await SupabaseClient.sign_up(email_input.text, password_input.text)
+	_show_account()
+
+
+func _login_from_fields(email_input: LineEdit, password_input: LineEdit) -> void:
+	await SupabaseClient.sign_in(email_input.text, password_input.text)
+	_show_account()
+
+
+func _sync_cloud_now() -> void:
+	await SupabaseClient.sync_progress()
+	await SupabaseClient.save_profile()
+	_show_account()
+
+
+func _sign_out_cloud() -> void:
+	await SupabaseClient.sign_out()
+	_show_account()
+
+
+func _record_multiplayer_result(won: bool) -> void:
+	var delta: int = ScoreStore.record_multiplayer_result(won)
+	await SupabaseClient.record_match("multiplayer", "", won, 1 if won else 0, 0 if won else 1)
+	_show_multiplayer()
+	status_label.text = "Resultado aplicado: %+d pontos" % delta
+
+
+func _complete_phase(phase_number: int) -> void:
+	var reward: Dictionary = ScoreStore.complete_monthly_phase(_month_key(), phase_number)
+	_show_monthly_phases()
+	status_label.text = "Recompensa: %d ouro, %d diamantes%s" % [int(reward["gold"]), int(reward["diamonds"]), "" if String(reward["item"]) == "" else ", item especial"]
+
+
+func _buy_shop_item(item: Dictionary) -> void:
+	var ok: bool = ScoreStore.purchase_item(String(item["id"]), String(item["currency"]), int(item["cost"]))
+	_show_shop()
+	status_label.text = "Item comprado." if ok else "Moedas insuficientes."
+
+
+func _equip_profile_item(kind: String, id: String, name_input: LineEdit) -> void:
+	var avatar: String = ScoreStore.avatar_id
+	var banner: String = ScoreStore.banner_id
+	var style: String = ScoreStore.name_style
+	if kind == "avatar":
+		avatar = id
+	elif kind == "banner":
+		banner = id
+	elif kind == "name_style":
+		style = id
+	ScoreStore.update_profile(name_input.text, avatar, banner, style, ScoreStore.featured_achievement)
+	await SupabaseClient.save_profile()
+	_show_profile_editor()
+
+
+func _show_unavailable_notice(message: String) -> void:
+	status_label.text = message
 
 
 func _update_score_label() -> void:
@@ -767,6 +976,18 @@ func _join_strings(items: Array[String]) -> String:
 	return result
 
 
+func _month_key() -> String:
+	var date: Dictionary = Time.get_date_dict_from_system()
+	return "%04d_%02d" % [int(date["year"]), int(date["month"])]
+
+
+func _season_label() -> String:
+	var date: Dictionary = Time.get_date_dict_from_system()
+	var month: int = int(date["month"])
+	var season_number: int = int(ceil(float(month) / 2.0))
+	return "%04d T%d" % [int(date["year"]), season_number]
+
+
 func _apply_unlocked_visuals() -> void:
 	if background_layer != null and background_layer.has_method("set_theme_id"):
 		background_layer.call("set_theme_id", ScoreStore.selected_background)
@@ -830,6 +1051,49 @@ func _achievement_requirement_met(achievement: Dictionary) -> bool:
 	if type == "rewards":
 		return ScoreStore.unlocked_reward_count() >= value
 	return false
+
+
+func _make_info_card(text: String) -> PanelContainer:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _button_style(Color(0.014, 0.021, 0.04, 0.92), Color(0.0, 0.64, 1.0, 0.48), 12))
+	var label: Label = _make_label(text, 15, Color(0.82, 0.9, 1.0))
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	panel.add_child(label)
+	return panel
+
+
+func _make_shop_card(item: Dictionary) -> PanelContainer:
+	var id: String = String(item["id"])
+	var owned: bool = ScoreStore.is_item_purchased(id)
+	var panel: PanelContainer = PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var border: Color = Color(0.0, 0.95, 0.78, 0.72) if owned else Color(1.0, 0.64, 0.0, 0.74)
+	panel.add_theme_stylebox_override("panel", _button_style(Color(0.014, 0.021, 0.04, 0.92), border, 12))
+	var box: VBoxContainer = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	panel.add_child(box)
+	var currency: String = String(item["currency"])
+	var cost: int = int(item["cost"])
+	var title: Label = _make_label("%s  // %s" % [String(item["name"]), "COMPRADO" if owned else "%d %s" % [cost, currency.to_upper()]], 16, Color(0.96, 0.99, 1.0))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	box.add_child(title)
+	var button: Button = _make_button("USAR NO PERFIL" if owned else "COMPRAR", Callable(self, "_buy_shop_item").bind(item))
+	button.disabled = owned
+	box.add_child(button)
+	return panel
+
+
+func _add_profile_item_buttons(kind: String, name_input: LineEdit) -> void:
+	for item in SHOP_ITEMS:
+		if String(item["kind"]) != kind:
+			continue
+		var id: String = String(item["id"])
+		if not ScoreStore.is_item_purchased(id):
+			continue
+		var selected: bool = (kind == "avatar" and ScoreStore.avatar_id == id) or (kind == "banner" and ScoreStore.banner_id == id) or (kind == "name_style" and ScoreStore.name_style == id)
+		content_box.add_child(_make_button("%s%s" % [String(item["name"]), "  // ATIVO" if selected else ""], Callable(self, "_equip_profile_item").bind(kind, id, name_input)))
 
 
 func _make_achievement_card(achievement: Dictionary) -> PanelContainer:
@@ -944,6 +1208,15 @@ func _apply_responsive_layout() -> void:
 	var max_width: float = 760.0 if wide else (680.0 if landscape else 540.0)
 	var root_width: float = minf(viewport_size.x - float(horizontal_margin * 2), max_width)
 	root_box.custom_minimum_size = Vector2(root_width, 0.0)
+	if content_scroll != null:
+		var scroll_height: float = viewport_size.y - safe_insets.y - safe_insets.w - float(vertical_margin * 2)
+		if screen_state == "menu":
+			scroll_height -= menu_logo.custom_minimum_size.y
+		elif screen_state == "collection":
+			scroll_height -= top_bar.size.y + status_label.size.y + 36.0
+		elif screen_state == "game_over":
+			scroll_height -= gameplay_top_margin
+		content_scroll.custom_minimum_size = Vector2(root_width, maxf(260.0, scroll_height))
 	if screen_state == "game_over":
 		content_box.custom_minimum_size = Vector2(root_width, maxf(320.0, viewport_size.y - safe_insets.y - safe_insets.w - 170.0))
 	else:

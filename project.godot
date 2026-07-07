@@ -19,6 +19,7 @@ config/icon="res://assets/icon.png"
 [autoload]
 
 ScoreStore="*res://scripts/score_store.gd"
+SupabaseClient="*res://scripts/supabase_client.gd"
 
 [display]
 

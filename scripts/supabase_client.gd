@@ -43,26 +43,35 @@ func auth_label() -> String:
 	return "Conectado: %s" % user_email
 
 
-func sign_in_anonymous() -> bool:
+func sign_up(display_name: String, email: String, password: String) -> bool:
 	if not _require_config():
 		return false
-	var result: Dictionary = await _auth_request("/signup", {"data": {"display_name": ScoreStore.display_name}})
-	if not _store_auth_result(result):
+	var clean_name: String = display_name.strip_edges()
+	var clean_email: String = email.strip_edges()
+	if clean_name == "":
+		last_error = "Informe o nome do usuario."
+		sync_status_changed.emit(last_error)
 		return false
-	await _ensure_profile()
-	await load_cloud_progress()
-	await sync_progress()
-	return true
-
-
-func sign_up(email: String, password: String) -> bool:
-	if not _require_config():
+	if clean_email == "" or password == "":
+		last_error = "Informe email e senha para criar a conta."
+		sync_status_changed.emit(last_error)
 		return false
+	ScoreStore.update_profile(clean_name, ScoreStore.avatar_id, ScoreStore.banner_id, ScoreStore.name_style, ScoreStore.featured_achievement)
 	var result: Dictionary = await _auth_request("/signup", {
-		"email": email.strip_edges(),
+		"email": clean_email,
 		"password": password,
-		"data": {"display_name": ScoreStore.display_name}
+		"data": {"display_name": clean_name}
 	})
+	if result.has("error"):
+		last_error = String(result["error"])
+		sync_status_changed.emit(last_error)
+		return false
+	var access: String = String(result.get("access_token", ""))
+	if access == "":
+		user_email = clean_email
+		last_error = "Conta criada. Enviamos um email de confirmacao para %s. Confirme o email antes de entrar." % clean_email
+		sync_status_changed.emit(last_error)
+		return true
 	if not _store_auth_result(result):
 		return false
 	await _ensure_profile()
@@ -257,7 +266,7 @@ func _store_auth_result(result: Dictionary) -> bool:
 		return false
 	var user: Dictionary = result.get("user", {})
 	if user.is_empty():
-		last_error = "Auth nao retornou usuario. Verifique confirmacao de email ou anon sign-ins."
+		last_error = "Auth nao retornou usuario. Verifique a confirmacao do email."
 		sync_status_changed.emit(last_error)
 		return false
 	access_token = String(result.get("access_token", ""))
@@ -265,6 +274,7 @@ func _store_auth_result(result: Dictionary) -> bool:
 	user_id = String(user.get("id", ""))
 	user_email = String(user.get("email", ""))
 	is_anonymous = bool(user.get("is_anonymous", user_email == ""))
+	last_error = ""
 	_save_session()
 	auth_changed.emit()
 	sync_status_changed.emit(auth_label())

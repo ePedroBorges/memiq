@@ -123,6 +123,24 @@ func _palette() -> Dictionary:
 			"glow_b": Color(0.0, 0.82, 0.64, 0.03),
 			"hue": 0.28,
 		}
+	if theme_id == "bg_rainbow":
+		return {
+			"base": Color(0.06, 0.04, 0.12, 1.0),
+			"scan": Color(1.0, 0.78, 0.14, 0.1),
+			"grid": Color(0.16, 0.1, 0.26, 0.14),
+			"glow_a": Color(1.0, 0.3, 0.6, 0.05),
+			"glow_b": Color(0.2, 0.9, 1.0, 0.05),
+			"hue": 0.1,
+		}
+	if theme_id == "bg_twilight":
+		return {
+			"base": Color(0.008, 0.012, 0.04, 1.0),
+			"scan": Color(0.68, 0.44, 1.0, 0.1),
+			"grid": Color(0.12, 0.08, 0.22, 0.14),
+			"glow_a": Color(0.9, 0.2, 1.0, 0.05),
+			"glow_b": Color(0.1, 0.4, 1.0, 0.05),
+			"hue": 0.7,
+		}
 
 	return {
 		"base": Color(0.003, 0.004, 0.012, 1.0),

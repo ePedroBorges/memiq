@@ -15,6 +15,7 @@ var unlocked_achievements: Dictionary = {}
 var unlocked_rewards: Dictionary = {}
 var selected_background: String = "bg_neon"
 var selected_board_style: String = "board_classic"
+var selected_sound_theme: String = "sound_classic"
 var audio_muted: bool = false
 var visual_theme: String = "dark"
 var display_name: String = "Jogador MEMIQ"
@@ -54,6 +55,7 @@ func load_scores() -> void:
 	survival_runs = int(config.get_value("survival", "runs", 0))
 	selected_background = String(config.get_value("rewards", "selected_background", "bg_neon"))
 	selected_board_style = String(config.get_value("rewards", "selected_board_style", "board_classic"))
+	selected_sound_theme = String(config.get_value("settings", "selected_sound_theme", "sound_classic"))
 	audio_muted = bool(config.get_value("settings", "audio_muted", false))
 	visual_theme = String(config.get_value("settings", "visual_theme", "dark"))
 	display_name = String(config.get_value("profile", "display_name", "Jogador MEMIQ"))
@@ -104,6 +106,7 @@ func save_scores() -> void:
 	config.set_value("survival", "runs", survival_runs)
 	config.set_value("rewards", "selected_background", selected_background)
 	config.set_value("rewards", "selected_board_style", selected_board_style)
+	config.set_value("settings", "selected_sound_theme", selected_sound_theme)
 	config.set_value("settings", "audio_muted", audio_muted)
 	config.set_value("settings", "visual_theme", visual_theme)
 	config.set_value("profile", "display_name", display_name)
@@ -228,6 +231,21 @@ func set_visual_theme(value: String) -> void:
 	save_scores()
 
 
+func set_background_theme(value: String) -> void:
+	selected_background = value
+	save_scores()
+
+
+func set_board_style(value: String) -> void:
+	selected_board_style = value
+	save_scores()
+
+
+func set_sound_theme(value: String) -> void:
+	selected_sound_theme = value
+	save_scores()
+
+
 func update_profile(new_name: String, new_avatar: String, new_banner: String, new_style: String, new_featured_achievement: String) -> void:
 	display_name = new_name.strip_edges()
 	if display_name == "":
@@ -307,6 +325,23 @@ func complete_monthly_phase(month_key: String, phase_number: int) -> Dictionary:
 	return {"gold": reward_gold, "diamonds": reward_diamonds, "item": reward_item}
 
 
+func complete_season_phase(season_key: String, phase_number: int) -> Dictionary:
+	return complete_monthly_phase(season_key, phase_number)
+
+
+func reset_season_phases(season_key: String) -> void:
+	var prefix: String = "%s_" % season_key
+	var keys: Array = monthly_completed_phases.keys()
+	for id in keys:
+		if String(id).begins_with(prefix):
+			monthly_completed_phases.erase(id)
+	save_scores()
+
+
+func season_phase_completed(season_key: String, phase_number: int) -> bool:
+	return monthly_phase_completed(season_key, phase_number)
+
+
 func monthly_phase_completed(month_key: String, phase_number: int) -> bool:
 	return bool(monthly_completed_phases.get("%s_%02d" % [month_key, phase_number], false))
 
@@ -354,6 +389,7 @@ func apply_cloud_payload(payload: Dictionary) -> void:
 	survival_runs = maxi(survival_runs, int(payload.get("survival_runs", survival_runs)))
 	selected_background = String(payload.get("selected_background", selected_background))
 	selected_board_style = String(payload.get("selected_board_style", selected_board_style))
+	selected_sound_theme = String(payload.get("selected_sound_theme", selected_sound_theme))
 	audio_muted = bool(payload.get("audio_muted", audio_muted))
 	visual_theme = String(payload.get("visual_theme", visual_theme))
 	display_name = String(payload.get("display_name", display_name))

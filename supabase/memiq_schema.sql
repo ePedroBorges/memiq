@@ -22,6 +22,8 @@ create table if not exists public.player_progress (
 	unlocked_rewards jsonb not null default '{}'::jsonb,
 	selected_background text not null default 'bg_neon',
 	selected_board_style text not null default 'board_classic',
+	selected_sound_theme text not null default 'sound_classic',
+	selected_music_theme text not null default 'music_neon_night',
 	audio_muted boolean not null default false,
 	visual_theme text not null default 'dark',
 	display_name text not null default 'Jogador MEMIQ',
@@ -41,6 +43,12 @@ create table if not exists public.player_progress (
 	purchased_items jsonb not null default '{}'::jsonb,
 	updated_at timestamptz not null default now()
 );
+
+alter table public.player_progress
+	add column if not exists selected_sound_theme text not null default 'sound_classic';
+
+alter table public.player_progress
+	add column if not exists selected_music_theme text not null default 'music_neon_night';
 
 create table if not exists public.match_history (
 	id bigint generated always as identity primary key,

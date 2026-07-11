@@ -16,6 +16,7 @@ var unlocked_rewards: Dictionary = {}
 var selected_background: String = "bg_neon"
 var selected_board_style: String = "board_classic"
 var selected_sound_theme: String = "sound_classic"
+var selected_music_theme: String = "music_neon_night"
 var audio_muted: bool = false
 var visual_theme: String = "dark"
 var display_name: String = "Jogador MEMIQ"
@@ -56,6 +57,7 @@ func load_scores() -> void:
 	selected_background = String(config.get_value("rewards", "selected_background", "bg_neon"))
 	selected_board_style = String(config.get_value("rewards", "selected_board_style", "board_classic"))
 	selected_sound_theme = String(config.get_value("settings", "selected_sound_theme", "sound_classic"))
+	selected_music_theme = String(config.get_value("settings", "selected_music_theme", "music_neon_night"))
 	audio_muted = bool(config.get_value("settings", "audio_muted", false))
 	visual_theme = String(config.get_value("settings", "visual_theme", "dark"))
 	display_name = String(config.get_value("profile", "display_name", "Jogador MEMIQ"))
@@ -107,6 +109,7 @@ func save_scores() -> void:
 	config.set_value("rewards", "selected_background", selected_background)
 	config.set_value("rewards", "selected_board_style", selected_board_style)
 	config.set_value("settings", "selected_sound_theme", selected_sound_theme)
+	config.set_value("settings", "selected_music_theme", selected_music_theme)
 	config.set_value("settings", "audio_muted", audio_muted)
 	config.set_value("settings", "visual_theme", visual_theme)
 	config.set_value("profile", "display_name", display_name)
@@ -161,6 +164,13 @@ func record_survival(score: int) -> bool:
 		save_scores()
 
 	return new_record
+
+
+func record_phase_result(score: int, completed: bool) -> void:
+	games_played += 1
+	best_overall = maxi(best_overall, score)
+	gold += 3 + score + (5 if completed else 0)
+	save_scores()
 
 
 func xp_to_next_survival_level(current_level: int = -1) -> int:
@@ -246,6 +256,13 @@ func set_sound_theme(value: String) -> void:
 	save_scores()
 
 
+func set_music_theme(value: String) -> void:
+	if not is_reward_unlocked(value) and not is_item_purchased(value):
+		return
+	selected_music_theme = value
+	save_scores()
+
+
 func update_profile(new_name: String, new_avatar: String, new_banner: String, new_style: String, new_featured_achievement: String) -> void:
 	display_name = new_name.strip_edges()
 	if display_name == "":
@@ -285,6 +302,31 @@ func is_item_purchased(id: String) -> bool:
 	return bool(purchased_items.get(id, false))
 
 
+func grant_item(id: String) -> bool:
+	if bool(purchased_items.get(id, false)):
+		return false
+	purchased_items[id] = true
+	save_scores()
+	return true
+
+
+func grant_all_content(reward_definitions: Array, shop_definitions: Array) -> bool:
+	var changed: bool = false
+	for reward in reward_definitions:
+		var reward_id: String = String(reward.get("id", ""))
+		if reward_id != "" and not bool(unlocked_rewards.get(reward_id, false)):
+			unlocked_rewards[reward_id] = true
+			changed = true
+	for item in shop_definitions:
+		var item_id: String = String(item.get("id", ""))
+		if item_id != "" and not bool(purchased_items.get(item_id, false)):
+			purchased_items[item_id] = true
+			changed = true
+	if changed:
+		save_scores()
+	return changed
+
+
 func record_multiplayer_result(won: bool, opponent_rating: int = 1000) -> int:
 	var previous_rating: int = multiplayer_rating
 	var delta: int = 20 + clampi(int((opponent_rating - multiplayer_rating) / 50), -8, 12)
@@ -314,9 +356,12 @@ func complete_monthly_phase(month_key: String, phase_number: int) -> Dictionary:
 	if bool(monthly_completed_phases.get(key, false)):
 		return {"gold": 0, "diamonds": 0, "item": ""}
 	monthly_completed_phases[key] = true
-	var reward_gold: int = 20 + phase_number * 2
-	var reward_diamonds: int = 5 if phase_number == 30 else 0
-	var reward_item: String = "banner_%s" % month_key if phase_number == 30 else ""
+	var reward_gold: int = 25 + phase_number * 3 + (100 if phase_number % 10 == 0 else 0)
+	var reward_diamonds: int = 3 if phase_number % 5 == 0 else 0
+	if phase_number % 10 == 0:
+		reward_diamonds += 7
+	var milestone_items: Dictionary = {10: "avatar_pixel", 20: "music_arcade", 30: "banner_temporada", 40: "music_dream"}
+	var reward_item: String = String(milestone_items.get(phase_number, ""))
 	gold += reward_gold
 	diamonds += reward_diamonds
 	if reward_item != "":
@@ -342,6 +387,14 @@ func season_phase_completed(season_key: String, phase_number: int) -> bool:
 	return monthly_phase_completed(season_key, phase_number)
 
 
+func completed_phase_count() -> int:
+	var total: int = 0
+	for id in monthly_completed_phases.keys():
+		if bool(monthly_completed_phases[id]):
+			total += 1
+	return total
+
+
 func monthly_phase_completed(month_key: String, phase_number: int) -> bool:
 	return bool(monthly_completed_phases.get("%s_%02d" % [month_key, phase_number], false))
 
@@ -359,6 +412,8 @@ func to_cloud_payload() -> Dictionary:
 		"unlocked_rewards": unlocked_rewards,
 		"selected_background": selected_background,
 		"selected_board_style": selected_board_style,
+		"selected_sound_theme": selected_sound_theme,
+		"selected_music_theme": selected_music_theme,
 		"audio_muted": audio_muted,
 		"visual_theme": visual_theme,
 		"display_name": display_name,
@@ -390,6 +445,7 @@ func apply_cloud_payload(payload: Dictionary) -> void:
 	selected_background = String(payload.get("selected_background", selected_background))
 	selected_board_style = String(payload.get("selected_board_style", selected_board_style))
 	selected_sound_theme = String(payload.get("selected_sound_theme", selected_sound_theme))
+	selected_music_theme = String(payload.get("selected_music_theme", selected_music_theme))
 	audio_muted = bool(payload.get("audio_muted", audio_muted))
 	visual_theme = String(payload.get("visual_theme", visual_theme))
 	display_name = String(payload.get("display_name", display_name))
@@ -433,6 +489,7 @@ func unlocked_reward_count() -> int:
 func _ensure_default_rewards() -> void:
 	unlocked_rewards["bg_neon"] = true
 	unlocked_rewards["board_classic"] = true
+	unlocked_rewards["music_neon_night"] = true
 	purchased_items["avatar_neon"] = true
 	purchased_items["banner_grid"] = true
 	purchased_items["style_default"] = true

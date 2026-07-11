@@ -17,6 +17,7 @@ var user_email: String = ""
 var is_anonymous: bool = false
 var last_error: String = ""
 var syncing: bool = false
+var sync_pending: bool = false
 
 
 func _ready() -> void:
@@ -41,6 +42,13 @@ func auth_label() -> String:
 	if is_anonymous:
 		return "Anonimo conectado"
 	return "Conectado: %s" % user_email
+
+
+func user_facing_error() -> String:
+	var lower: String = last_error.to_lower()
+	if "jwt" in lower or "expired" in lower or "token" in lower:
+		return "Sua sessão expirou. Entre novamente para continuar sincronizando."
+	return last_error
 
 
 func sign_up(display_name: String, email: String, password: String) -> bool:
@@ -113,13 +121,28 @@ func sync_progress() -> bool:
 	var body: Dictionary = ScoreStore.to_cloud_payload()
 	body["user_id"] = user_id
 	var result: Variant = await _rest_request("/player_progress?on_conflict=user_id", HTTPClient.METHOD_POST, body, "resolution=merge-duplicates,return=representation")
+	# Mantém versões já publicadas funcionando enquanto a coluna de tema de som
+	# ainda não foi aplicada no projeto remoto.
+	if result is Dictionary and result.has("error") and String(result["error"]).contains("selected_sound_theme"):
+		body.erase("selected_sound_theme")
+		result = await _rest_request("/player_progress?on_conflict=user_id", HTTPClient.METHOD_POST, body, "resolution=merge-duplicates,return=representation")
+	if result is Dictionary and result.has("error") and String(result["error"]).contains("selected_music_theme"):
+		body.erase("selected_music_theme")
+		result = await _rest_request("/player_progress?on_conflict=user_id", HTTPClient.METHOD_POST, body, "resolution=merge-duplicates,return=representation")
+	if result is Dictionary and result.has("error") and String(result["error"]).contains("selected_sound_theme"):
+		body.erase("selected_sound_theme")
+		result = await _rest_request("/player_progress?on_conflict=user_id", HTTPClient.METHOD_POST, body, "resolution=merge-duplicates,return=representation")
 	syncing = false
 	if result is Dictionary and result.has("error"):
 		last_error = String(result["error"])
 		sync_status_changed.emit("Falha ao salvar na nuvem: %s" % last_error)
+		if sync_pending:
+			call_deferred("_flush_pending_sync")
 		return false
 	await _sync_leaderboard_entry()
 	sync_status_changed.emit("Progresso salvo na nuvem")
+	if sync_pending:
+		call_deferred("_flush_pending_sync")
 	return true
 
 
@@ -181,7 +204,17 @@ func fetch_leaderboard(limit: int = 50) -> Array:
 
 func _on_score_store_changed() -> void:
 	if is_signed_in():
-		call_deferred("sync_progress")
+		sync_pending = true
+		call_deferred("_flush_pending_sync")
+
+
+func _flush_pending_sync() -> void:
+	if syncing or not is_signed_in() or not sync_pending:
+		return
+	sync_pending = false
+	await sync_progress()
+	if sync_pending:
+		call_deferred("_flush_pending_sync")
 
 
 func _ensure_profile() -> void:
@@ -224,7 +257,35 @@ func _rest_request(path: String, method: int, body: Variant = null, prefer: Stri
 	if prefer != "":
 		headers.append("Prefer: %s" % prefer)
 	var url: String = "%s/rest/v1%s" % [PROJECT_URL.trim_suffix("/"), path]
-	return await _http_json(url, method, headers, body)
+	var result: Variant = await _http_json(url, method, headers, body)
+	if result is Dictionary and int(result.get("status", 0)) == 401 and await _refresh_session():
+		headers = _base_headers(true)
+		if prefer != "":
+			headers.append("Prefer: %s" % prefer)
+		result = await _http_json(url, method, headers, body)
+	return result
+
+
+func _refresh_session() -> bool:
+	if refresh_token == "":
+		_clear_session("Sua sessão expirou. Entre novamente para continuar sincronizando.")
+		return false
+	var result: Dictionary = await _auth_request("/token?grant_type=refresh_token", {"refresh_token": refresh_token})
+	if result.has("error") or not _store_auth_result(result):
+		_clear_session("Sua sessão expirou. Entre novamente para continuar sincronizando.")
+		return false
+	return true
+
+
+func _clear_session(message: String = "") -> void:
+	access_token = ""
+	refresh_token = ""
+	user_id = ""
+	user_email = ""
+	is_anonymous = false
+	last_error = message
+	_save_session()
+	auth_changed.emit()
 
 
 func _http_json(url: String, method: int, headers: PackedStringArray, body: Variant = null) -> Variant:

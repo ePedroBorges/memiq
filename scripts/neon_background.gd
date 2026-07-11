@@ -141,6 +141,15 @@ func _palette() -> Dictionary:
 			"glow_b": Color(0.1, 0.4, 1.0, 0.05),
 			"hue": 0.7,
 		}
+	if theme_id == "bg_master":
+		return {
+			"base": Color(0.012, 0.008, 0.032, 1.0),
+			"scan": Color(1.0, 0.72, 0.12, 0.12),
+			"grid": Color(0.22, 0.12, 0.36, 0.16),
+			"glow_a": Color(1.0, 0.54, 0.08, 0.055),
+			"glow_b": Color(0.4, 0.16, 1.0, 0.05),
+			"hue": 0.82,
+		}
 
 	return {
 		"base": Color(0.003, 0.004, 0.012, 1.0),

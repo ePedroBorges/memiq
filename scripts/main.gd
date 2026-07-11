@@ -1,6 +1,7 @@
 extends Control
 
 const SPLASH_SECONDS: float = 2.2
+const OWNER_EMAIL: String = "pedroborges906@gmail.com"
 const ACHIEVEMENTS: Array[Dictionary] = [
 	{"id": "first_signal", "name": "Primeiro Sinal", "requirement": "Jogue sua primeira partida.", "type": "games", "value": 1},
 	{"id": "games_10", "name": "Rotina de Treino", "requirement": "Jogue 10 partidas.", "type": "games", "value": 10},
@@ -16,7 +17,36 @@ const ACHIEVEMENTS: Array[Dictionary] = [
 	{"id": "rewards_4", "name": "Primeira Colecao", "requirement": "Desbloqueie 4 recompensas.", "type": "rewards", "value": 4},
 	{"id": "rewards_8", "name": "Inventario Neon", "requirement": "Desbloqueie 8 recompensas.", "type": "rewards", "value": 8},
 	{"id": "rewards_12", "name": "Vitrine Premium", "requirement": "Desbloqueie 12 recompensas.", "type": "rewards", "value": 12},
+	{"id": "phase_first", "name": "Primeira Fase", "requirement": "Conclua sua primeira fase.", "type": "phases", "value": 1},
+	{"id": "phases_10", "name": "Explorador da Temporada", "requirement": "Conclua 10 fases.", "type": "phases", "value": 10},
+	{"id": "phases_20", "name": "Memoria em Progresso", "requirement": "Conclua 20 fases.", "type": "phases", "value": 20},
+	{"id": "phases_40", "name": "Mestre da Temporada", "requirement": "Conclua 40 fases.", "type": "phases", "value": 40},
+	{"id": "wealth_1000", "name": "Cofre Neon", "requirement": "Junte 1.000 moedas de ouro.", "type": "gold", "value": 1000},
+	{"id": "games_50", "name": "Ritmo Imparável", "requirement": "Jogue 50 partidas.", "type": "games", "value": 50},
+	{"id": "games_100", "name": "Veterano MEMIQ", "requirement": "Jogue 100 partidas.", "type": "games", "value": 100},
+	{"id": "phases_5", "name": "Primeiro Setor", "requirement": "Conclua 5 fases.", "type": "phases", "value": 5},
+	{"id": "phases_30", "name": "Reta Final", "requirement": "Conclua 30 fases.", "type": "phases", "value": 30},
+	{"id": "level_15", "name": "Mente Elétrica", "requirement": "Suba para o nível 15.", "type": "level", "value": 15},
+	{"id": "level_30", "name": "Ícone da Memória", "requirement": "Suba para o nível 30.", "type": "level", "value": 30},
+	{"id": "wealth_250", "name": "Primeiras Economias", "requirement": "Junte 250 moedas de ouro.", "type": "gold", "value": 250},
 ]
+const ACHIEVEMENT_REWARDS: Dictionary = {
+	"first_signal": {"gold": 75, "diamonds": 0},
+	"games_10": {"gold": 150, "diamonds": 5},
+	"games_25": {"gold": 250, "diamonds": 10},
+	"games_50": {"gold": 400, "diamonds": 15},
+	"games_100": {"gold": 750, "diamonds": 30},
+	"infinite_10": {"gold": 120, "diamonds": 5},
+	"infinite_25": {"gold": 300, "diamonds": 12},
+	"infinite_50": {"gold": 600, "diamonds": 25},
+	"infinite_100": {"gold": 1200, "diamonds": 60},
+	"phase_first": {"gold": 80, "diamonds": 0},
+	"phases_10": {"gold": 250, "diamonds": 10},
+	"phases_20": {"gold": 450, "diamonds": 20},
+	"phases_40": {"gold": 900, "diamonds": 50},
+	"level_15": {"gold": 300, "diamonds": 15, "item": "music_starlight"},
+	"level_30": {"gold": 800, "diamonds": 40, "item": "music_legend"},
+}
 const REWARDS: Array[Dictionary] = [
 	{"id": "bg_neon", "kind": "background", "name": "Fundo Neon Grid", "requirement": "Inicial", "level": 1},
 	{"id": "board_classic", "kind": "board", "name": "Genius Classico RGB", "requirement": "Inicial", "level": 1},
@@ -32,17 +62,47 @@ const REWARDS: Array[Dictionary] = [
 	{"id": "board_candy", "kind": "board", "name": "Genius Candy", "requirement": "Alcance o nivel 12", "level": 12},
 	{"id": "bg_lime", "kind": "background", "name": "Fundo Lime Pulse", "requirement": "Alcance o nivel 15", "level": 15},
 	{"id": "board_midnight", "kind": "board", "name": "Genius Midnight", "requirement": "Alcance o nivel 16", "level": 16},
+	{"id": "bg_rainbow", "kind": "background", "name": "Fundo Rainbow Pop", "requirement": "Alcance o nível 18", "level": 18},
+	{"id": "board_pop", "kind": "board", "name": "Genius Pop", "requirement": "Alcance o nível 20", "level": 20},
+	{"id": "bg_twilight", "kind": "background", "name": "Fundo Twilight", "requirement": "Alcance o nível 22", "level": 22},
+	{"id": "board_smooth", "kind": "board", "name": "Genius Smooth", "requirement": "Alcance o nível 24", "level": 24},
+	{"id": "bg_master", "kind": "background", "name": "Fundo Master Pulse", "requirement": "Alcance o nível 28", "level": 28},
+	{"id": "board_master", "kind": "board", "name": "Genius Master", "requirement": "Alcance o nível 30", "level": 30},
+	{"id": "music_neon_night", "kind": "music", "name": "Neon Night", "requirement": "Inicial", "level": 1},
+	{"id": "music_focus", "kind": "music", "name": "Focus Loop", "requirement": "Alcance o nível 6", "level": 6},
+	{"id": "music_starlight", "kind": "music", "name": "Starlight", "requirement": "Alcance o nível 15", "level": 15},
+	{"id": "music_legend", "kind": "music", "name": "Legend Pulse", "requirement": "Alcance o nível 30", "level": 30},
 ]
 const SHOP_ITEMS: Array[Dictionary] = [
 	{"id": "avatar_neon", "kind": "avatar", "name": "Avatar Neon", "currency": "gold", "cost": 0},
 	{"id": "avatar_prisma", "kind": "avatar", "name": "Avatar Prisma", "currency": "gold", "cost": 450},
 	{"id": "avatar_diamante", "kind": "avatar", "name": "Avatar Diamante", "currency": "diamonds", "cost": 80},
+	{"id": "avatar_pixel", "kind": "avatar", "name": "Avatar Pixel", "currency": "gold", "cost": 650},
+	{"id": "avatar_cyber", "kind": "avatar", "name": "Avatar Cyber", "currency": "gold", "cost": 1100},
+	{"id": "avatar_lendario", "kind": "avatar", "name": "Avatar Lendário", "currency": "diamonds", "cost": 180},
 	{"id": "banner_grid", "kind": "banner", "name": "Banner Grid", "currency": "gold", "cost": 0},
 	{"id": "banner_temporada", "kind": "banner", "name": "Banner Temporada", "currency": "gold", "cost": 700},
 	{"id": "banner_luxo", "kind": "banner", "name": "Banner Luxo", "currency": "diamonds", "cost": 120},
+	{"id": "banner_aurora", "kind": "banner", "name": "Banner Aurora", "currency": "gold", "cost": 600},
+	{"id": "banner_arcade", "kind": "banner", "name": "Banner Arcade", "currency": "gold", "cost": 900},
+	{"id": "banner_cosmico", "kind": "banner", "name": "Banner Cósmico", "currency": "diamonds", "cost": 160},
 	{"id": "style_default", "kind": "name_style", "name": "Nome Padrao", "currency": "gold", "cost": 0},
 	{"id": "style_gold", "kind": "name_style", "name": "Nome Dourado", "currency": "gold", "cost": 950},
 	{"id": "style_diamond", "kind": "name_style", "name": "Nome Diamante", "currency": "diamonds", "cost": 150},
+	{"id": "style_neon", "kind": "name_style", "name": "Nome Neon", "currency": "gold", "cost": 500},
+	{"id": "style_arcade", "kind": "name_style", "name": "Nome Arcade", "currency": "gold", "cost": 850},
+	{"id": "style_legend", "kind": "name_style", "name": "Nome Lendário", "currency": "diamonds", "cost": 220},
+	{"id": "music_arcade", "kind": "music", "name": "Arcade Memory", "currency": "gold", "cost": 900},
+	{"id": "music_dream", "kind": "music", "name": "Dream Circuit", "currency": "diamonds", "cost": 90},
+]
+
+const MUSIC_THEME_OPTIONS: Array[Dictionary] = [
+	{"id": "music_neon_night", "name": "Neon Night"},
+	{"id": "music_focus", "name": "Focus Loop"},
+	{"id": "music_starlight", "name": "Starlight"},
+	{"id": "music_legend", "name": "Legend Pulse"},
+	{"id": "music_arcade", "name": "Arcade Memory"},
+	{"id": "music_dream", "name": "Dream Circuit"},
 ]
 
 const BACKGROUND_THEME_OPTIONS: Array[Dictionary] = [
@@ -54,16 +114,20 @@ const BACKGROUND_THEME_OPTIONS: Array[Dictionary] = [
 	{"id": "bg_lime", "name": "Lime Pulse"},
 	{"id": "bg_rainbow", "name": "Rainbow Pop"},
 	{"id": "bg_twilight", "name": "Twilight"},
+	{"id": "bg_master", "name": "Master Pulse"},
 ]
 
 const BOARD_STYLE_OPTIONS: Array[Dictionary] = [
-	{"id": "board_classic", "name": "Classico"},
-	{"id": "board_plasma", "name": "Plasma"},
-	{"id": "board_solar", "name": "Solar"},
-	{"id": "board_crystal", "name": "Crystal"},
-	{"id": "board_void", "name": "Void"},
-	{"id": "board_pop", "name": "Pop"},
-	{"id": "board_smooth", "name": "Smooth"},
+	{"id": "board_classic", "name": "Clássico", "icon": "◎", "pattern": "Neon profundo"},
+	{"id": "board_plasma", "name": "Plasma", "icon": "ϟ", "pattern": "Turquesa e violeta"},
+	{"id": "board_solar", "name": "Solar", "icon": "☀", "pattern": "Âmbar escuro"},
+	{"id": "board_crystal", "name": "Crystal", "icon": "◆", "pattern": "Tons frios"},
+	{"id": "board_void", "name": "Void", "icon": "✦", "pattern": "Cores do espaço"},
+	{"id": "board_midnight", "name": "Midnight", "icon": "⋆", "pattern": "Paleta noturna"},
+	{"id": "board_candy", "name": "Candy", "icon": "○", "pattern": "Pastel escuro"},
+	{"id": "board_pop", "name": "Pop", "icon": "✣", "pattern": "Arcade moderno"},
+	{"id": "board_smooth", "name": "Smooth", "icon": "≈", "pattern": "Cores suaves"},
+	{"id": "board_master", "name": "Master", "icon": "◇", "pattern": "Paleta premium"},
 ]
 
 const SOUND_THEME_OPTIONS: Array[Dictionary] = [
@@ -88,8 +152,11 @@ var current_phase_goal: int = 0
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var session_id: int = 0
 var current_back_target: String = "menu"
+var current_back_action: Callable = Callable()
 var screen_state: String = "menu"
 var responsive_layout_queued: bool = false
+var active_shop_kind: String = ""
+var active_settings_section: String = ""
 
 var root_box: VBoxContainer
 var top_bar: HBoxContainer
@@ -115,10 +182,14 @@ var hud_xp_label: Label
 var hud_xp_bar: ProgressBar
 var hud_reward_label: Label
 var options_button: Button
+var replay_pattern_button: Button
 var in_game_options: PanelContainer
 var mute_button: Button
 var menu_button: Button
 var audio_player: AudioStreamPlayer
+var music_player: AudioStreamPlayer
+var music_timer: Timer
+var music_note_index: int = 0
 var splash_layer: CanvasLayer
 var splash_root: Control
 
@@ -130,6 +201,7 @@ func _ready() -> void:
 	if get_viewport().has_signal("size_changed"):
 		get_viewport().connect("size_changed", Callable(self, "_queue_responsive_layout"))
 	call_deferred("_apply_responsive_layout")
+	call_deferred("_apply_owner_access")
 	_show_splash()
 
 
@@ -223,6 +295,9 @@ func _build_ui() -> void:
 	content_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_scroll.follow_focus = true
+	content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	content_scroll.scroll_deadzone = 12
 	root_box.add_child(content_scroll)
 
 	content_box = VBoxContainer.new()
@@ -247,6 +322,11 @@ func _build_ui() -> void:
 	options_button.position = Vector2(18, 18)
 	options_button.visible = false
 	add_child(options_button)
+
+	replay_pattern_button = _make_icon_button("↻", _on_replay_pattern_pressed)
+	replay_pattern_button.visible = false
+	replay_pattern_button.tooltip_text = "Rever padrão"
+	add_child(replay_pattern_button)
 
 	hud_panel = PanelContainer.new()
 	hud_panel.visible = false
@@ -308,6 +388,16 @@ func _build_ui() -> void:
 	audio_player.stream = AudioStreamGenerator.new()
 	audio_player.volume_db = -8.0
 	add_child(audio_player)
+
+	music_player = AudioStreamPlayer.new()
+	music_player.stream = AudioStreamGenerator.new()
+	music_player.volume_db = -22.0
+	add_child(music_player)
+	music_timer = Timer.new()
+	music_timer.wait_time = 0.46
+	music_timer.autostart = true
+	music_timer.timeout.connect(_on_music_tick)
+	add_child(music_timer)
 
 	root_box.visible = false
 	_apply_unlocked_visuals()
@@ -400,6 +490,7 @@ func _show_menu() -> void:
 
 func _show_game_modes() -> void:
 	_show_collection_screen("MODOS DE JOGO", "Escolha como jogar", "Temporadas ranqueadas, fases sazonais e modos locais.")
+	_set_back_action(_show_menu)
 	var mode_grid: GridContainer = _make_card_grid(_responsive_columns(3))
 	mode_grid.add_child(_make_feature_tile("INFINITO", "Sequencia crescente para bater recordes e ganhar XP.", "SOLO", _start_survival, Color(0.0, 0.9, 1.0, 0.82)))
 	mode_grid.add_child(_make_feature_tile("FASES", "%d desafios da temporada %s." % [PHASES_PER_SEASON, _season_label()], "SAZONAL", _show_season_phases, Color(1.0, 0.72, 0.16, 0.82)))
@@ -411,6 +502,7 @@ func _show_game_modes() -> void:
 
 func _show_local_multiplayer() -> void:
 	_show_collection_screen("MULTIPLAYER LOCAL", "Rede Wi-Fi local", "Preparado para partidas em LAN. O salvamento de historico usa a conta conectada.")
+	_set_back_action(_show_game_modes)
 	content_box.add_child(_make_section_label("STATUS"))
 	content_box.add_child(_make_info_card("Crie ou entre em uma sala na mesma rede Wi-Fi. A camada online esta separada para receber o protocolo de host/cliente sem mexer no progresso."))
 	var lobby_grid: GridContainer = _make_card_grid(_responsive_columns(2))
@@ -422,6 +514,7 @@ func _show_local_multiplayer() -> void:
 
 func _show_multiplayer() -> void:
 	_show_collection_screen("MULTIPLAYER", "Temporada atual: %s" % _season_label(), "Rank por vitorias e derrotas. Bronze/Prata perdem pontos depois de 2 derrotas seguidas; Ouro+ perde na primeira derrota.")
+	_set_back_action(_show_game_modes)
 	content_box.add_child(_make_info_card("Patente: %s\nPontuacao: %d\nVitorias: %d  Derrotas: %d\nSequencia de derrotas: %d" % [ScoreStore.rank_name, ScoreStore.multiplayer_rating, ScoreStore.multiplayer_wins, ScoreStore.multiplayer_losses, ScoreStore.multiplayer_loss_streak]))
 	var multiplayer_grid: GridContainer = _make_card_grid(_responsive_columns(3))
 	multiplayer_grid.add_child(_make_feature_tile("BUSCAR PARTIDA", "Matchmaking online preparado para a proxima etapa.", "ONLINE", Callable(self, "_show_unavailable_notice").bind("Matchmaking online preparado para integrar com Supabase Realtime/servidor de partidas."), Color(0.0, 0.78, 1.0, 0.78)))
@@ -433,6 +526,7 @@ func _show_multiplayer() -> void:
 func _show_season_phases() -> void:
 	var season_key: String = _season_key()
 	_show_collection_screen("FASES", "%s: %d fases" % [_season_label(), PHASES_PER_SEASON], "Sazonal. Complete fases em 4 seções e desbloqueie recompensas à medida que avança.")
+	_set_back_action(_show_game_modes)
 	for section_index in range(PHASE_SECTION_LABELS.size()):
 		content_box.add_child(_make_section_label("%s %d" % [PHASE_SECTION_LABELS[section_index], section_index + 1]))
 		var phase_grid: GridContainer = _make_card_grid(_responsive_columns(5))
@@ -445,30 +539,56 @@ func _show_season_phases() -> void:
 
 func _show_profile() -> void:
 	_show_collection_screen("PERFIL", ScoreStore.display_name, "Conta, visual, conquistas, recompensas, amigos e historico.")
-	content_box.add_child(_make_info_card("Conta: %s\nOuro: %d  Diamantes: %d\nPatente: %s (%d)" % [SupabaseClient.auth_label(), ScoreStore.gold, ScoreStore.diamonds, ScoreStore.rank_name, ScoreStore.multiplayer_rating]))
-	var profile_grid: GridContainer = _make_card_grid(_responsive_columns(3))
-	profile_grid.add_child(_make_feature_tile("CONTA", "Login, nuvem e sincronizacao de progresso.", SupabaseClient.auth_label().to_upper(), _show_account, Color(0.0, 0.78, 1.0, 0.78)))
-	profile_grid.add_child(_make_feature_tile("EDITAR", "Nome, avatar, banner e estilo do jogador.", "VISUAL", _show_profile_editor, Color(1.0, 0.58, 0.14, 0.82)))
-	profile_grid.add_child(_make_feature_tile("CUSTOMIZACAO", "Fundo e tabuleiro liberados pelo nivel.", "JOGO", _show_customization, Color(0.86, 0.36, 1.0, 0.78)))
-	profile_grid.add_child(_make_feature_tile("CONQUISTAS", "Objetivos permanentes desbloqueados.", "%d/%d" % [_achievement_count(), ACHIEVEMENTS.size()], _show_achievements, Color(1.0, 0.78, 0.2, 0.82)))
-	profile_grid.add_child(_make_feature_tile("RECOMPENSAS", "Colecao conquistada ao subir de nivel.", "%d/%d" % [ScoreStore.unlocked_reward_count(), REWARDS.size()], _show_rewards, Color(0.32, 1.0, 0.72, 0.78)))
-	profile_grid.add_child(_make_feature_tile("AMIGOS", "Convites e partidas sociais.", "SOCIAL", _show_friends, Color(0.5, 0.72, 1.0, 0.78)))
-	profile_grid.add_child(_make_feature_tile("HISTORICO", "Partidas registradas localmente e na nuvem.", "MATCHES", _show_match_history, Color(1.0, 0.36, 0.52, 0.72)))
-	content_box.add_child(profile_grid)
+	_set_back_action(_show_menu)
+	content_box.add_child(_make_info_card("%s\nNÍVEL %d  •  %d/%d XP  •  RECORDE %d\n%d PARTIDAS  •  %d FASES  •  %d OURO  •  %d DIAMANTES\nVisual ativo: %s  •  %s" % [ScoreStore.display_name, ScoreStore.survival_level, ScoreStore.survival_xp, ScoreStore.xp_to_next_survival_level(), ScoreStore.best_survival, ScoreStore.games_played, ScoreStore.completed_phase_count(), ScoreStore.gold, ScoreStore.diamonds, ScoreStore.avatar_id.replace("avatar_", "").capitalize(), ScoreStore.banner_id.replace("banner_", "").capitalize()]))
+	content_box.add_child(_make_section_label("●  CONTA E IDENTIDADE"))
+	var identity_grid: GridContainer = _make_card_grid(_responsive_columns(2))
+	identity_grid.add_child(_make_feature_tile("CONTA", "Login, nuvem e sincronização de progresso.", SupabaseClient.auth_label().to_upper(), _show_account, Color(0.0, 0.78, 1.0, 0.78)))
+	identity_grid.add_child(_make_feature_tile("EDITAR PERFIL", "Nome, avatar, banner e estilo.", "VISUAL", _show_profile_editor, Color(1.0, 0.58, 0.14, 0.82)))
+	content_box.add_child(identity_grid)
+	content_box.add_child(_make_section_label("★  PROGRESSO E COLEÇÃO"))
+	var progress_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	progress_grid.add_child(_make_feature_tile("CUSTOMIZAÇÃO", "Fundos e tabuleiros liberados.", "JOGO", _show_customization, Color(0.86, 0.36, 1.0, 0.78)))
+	progress_grid.add_child(_make_feature_tile("CONQUISTAS", "Metas permanentes e bônus.", "%d/%d" % [_achievement_count(), ACHIEVEMENTS.size()], _show_achievements, Color(1.0, 0.78, 0.2, 0.82)))
+	progress_grid.add_child(_make_feature_tile("RECOMPENSAS", "Itens conquistados por nível.", "%d/%d" % [ScoreStore.unlocked_reward_count(), REWARDS.size()], _show_rewards, Color(0.32, 1.0, 0.72, 0.78)))
+	content_box.add_child(progress_grid)
+	content_box.add_child(_make_section_label("◎  SOCIAL E ATIVIDADE"))
+	var social_grid: GridContainer = _make_card_grid(_responsive_columns(2))
+	social_grid.add_child(_make_feature_tile("AMIGOS", "Convites e partidas sociais.", "SOCIAL", _show_friends, Color(0.5, 0.72, 1.0, 0.78)))
+	social_grid.add_child(_make_feature_tile("HISTÓRICO", "Partidas locais e na nuvem.", "PARTIDAS", _show_match_history, Color(1.0, 0.36, 0.52, 0.72)))
+	content_box.add_child(social_grid)
 	_apply_responsive_layout()
 
 
 func _show_shop() -> void:
 	_show_collection_screen("LOJA", "Ouro %d  // Diamantes %d" % [ScoreStore.gold, ScoreStore.diamonds], "Ouro vem das partidas. Diamantes ficam prontos para compra com dinheiro real.")
-	var shop_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	_set_back_action(_show_menu)
+	active_shop_kind = ""
+	content_box.add_child(_make_info_card("SALDO  •  %d OURO  •  %d DIAMANTES\nEscolha uma categoria para ver os itens." % [ScoreStore.gold, ScoreStore.diamonds]))
+	var category_grid: GridContainer = _make_card_grid(3)
+	category_grid.add_child(_make_feature_tile("AVATARES", "Rostos e símbolos para representar seu perfil.", "●  IDENTIDADE", Callable(self, "_show_shop_category").bind("avatar"), Color(0.0, 0.84, 1.0, 0.82)))
+	category_grid.add_child(_make_feature_tile("BANNERS", "Planos de fundo para destacar seu cartão.", "▰  PERFIL", Callable(self, "_show_shop_category").bind("banner"), Color(1.0, 0.62, 0.14, 0.82)))
+	category_grid.add_child(_make_feature_tile("ESTILOS DE NOME", "Cores e acabamentos para o nome do jogador.", "✦  TEXTO", Callable(self, "_show_shop_category").bind("name_style"), Color(0.72, 0.34, 1.0, 0.82)))
+	category_grid.add_child(_make_feature_tile("MÚSICAS", "Novas trilhas para acompanhar as partidas.", "♫  ÁUDIO", Callable(self, "_show_shop_category").bind("music"), Color(0.24, 0.9, 0.72, 0.82)))
+	content_box.add_child(category_grid)
+	_apply_responsive_layout()
+
+
+func _show_shop_category(kind: String) -> void:
+	active_shop_kind = kind
+	_show_collection_screen(_item_group_label(kind).substr(3), "Ouro %d  // Diamantes %d" % [ScoreStore.gold, ScoreStore.diamonds], "Toque em um item para comprar. Itens adquiridos ficam disponíveis no perfil.")
+	_set_back_action(_show_shop)
+	var shop_grid: GridContainer = _make_card_grid(3)
 	for item in SHOP_ITEMS:
-		shop_grid.add_child(_make_shop_card(item))
+		if String(item["kind"]) == kind:
+			shop_grid.add_child(_make_shop_card(item))
 	content_box.add_child(shop_grid)
 	_apply_responsive_layout()
 
 
 func _show_achievements() -> void:
 	_show_collection_screen("CONQUISTAS", "%d/%d desbloqueadas" % [_achievement_count(), ACHIEVEMENTS.size()], "Objetivos permanentes para dominar o Infinito.")
+	_set_back_action(_show_profile)
 	var achievement_grid: GridContainer = _make_card_grid(_responsive_columns(3))
 	for achievement in ACHIEVEMENTS:
 		achievement_grid.add_child(_make_achievement_card(achievement))
@@ -478,6 +598,7 @@ func _show_achievements() -> void:
 
 func _show_rewards() -> void:
 	_show_collection_screen("RECOMPENSAS", "%d/%d liberadas" % [ScoreStore.unlocked_reward_count(), REWARDS.size()], "Itens ganhados ao subir de nivel.")
+	_set_back_action(_show_profile)
 	var reward_grid: GridContainer = _make_card_grid(_responsive_columns(3))
 	for reward in REWARDS:
 		reward_grid.add_child(_make_reward_card(reward, false))
@@ -487,13 +608,14 @@ func _show_rewards() -> void:
 
 func _show_customization() -> void:
 	_show_collection_screen("CUSTOMIZACAO", "Fundo e estilo do Genius", "Escolha os itens ja liberados.")
-	content_box.add_child(_make_section_label("FUNDOS"))
+	_set_back_action(_show_profile)
+	content_box.add_child(_make_section_label("▣  FUNDOS"))
 	var background_grid: GridContainer = _make_card_grid(_responsive_columns(3))
 	for reward in REWARDS:
 		if String(reward["kind"]) == "background":
 			background_grid.add_child(_make_reward_card(reward, true))
 	content_box.add_child(background_grid)
-	content_box.add_child(_make_section_label("GENIUS"))
+	content_box.add_child(_make_section_label("◉  TABULEIROS GENIUS"))
 	var board_grid: GridContainer = _make_card_grid(_responsive_columns(3))
 	for reward in REWARDS:
 		if String(reward["kind"]) == "board":
@@ -504,56 +626,97 @@ func _show_customization() -> void:
 
 func _show_settings() -> void:
 	_show_collection_screen("CONFIGURACOES", "Preferencias do jogo", "Ajustes salvos automaticamente.")
-	content_box.add_child(_make_section_label("TEMA"))
-	var theme_grid: GridContainer = _make_card_grid(_responsive_columns(2))
-	theme_grid.add_child(_make_button("TEMA CLARO" if not ScoreStore.is_light_theme() else "TEMA CLARO  // ATIVO", Callable(self, "_set_visual_theme").bind("light")))
-	theme_grid.add_child(_make_button("TEMA ESCURO" if ScoreStore.is_light_theme() else "TEMA ESCURO  // ATIVO", Callable(self, "_set_visual_theme").bind("dark")))
-	content_box.add_child(theme_grid)
+	_set_back_action(_show_menu)
+	active_settings_section = ""
+	var settings_grid: GridContainer = _make_card_grid(2)
+	settings_grid.add_child(_make_feature_tile("APARÊNCIA", "Tema claro ou escuro da interface.", "☀  TEMA", Callable(self, "_show_settings_section").bind("theme"), Color(1.0, 0.72, 0.18, 0.82)))
+	settings_grid.add_child(_make_feature_tile("PALETA", "Cores e atmosfera do plano de fundo.", "◈  CORES", Callable(self, "_show_settings_section").bind("palette"), Color(0.0, 0.82, 1.0, 0.82)))
+	settings_grid.add_child(_make_feature_tile("TABULEIRO", "Estilo visual das quatro áreas de jogo.", "▦  GAMEPLAY", Callable(self, "_show_settings_section").bind("board"), Color(0.36, 1.0, 0.68, 0.82)))
+	settings_grid.add_child(_make_feature_tile("ÁUDIO", "Som, efeitos e identidade sonora.", "♫  SOM", Callable(self, "_show_settings_section").bind("audio"), Color(0.86, 0.36, 1.0, 0.82)))
+	content_box.add_child(settings_grid)
+	_apply_responsive_layout()
 
-	content_box.add_child(_make_section_label("PALETA"))
-	var palette_grid: GridContainer = _make_card_grid(_responsive_columns(4))
-	for theme in BACKGROUND_THEME_OPTIONS:
-		var label: String = String(theme["name"])
-		if ScoreStore.selected_background == String(theme["id"]):
-			label += "  // ATIVA"
-		palette_grid.add_child(_make_button(label, Callable(self, "_set_background_theme").bind(String(theme["id"]))))
-	content_box.add_child(palette_grid)
 
-	content_box.add_child(_make_section_label("ESTILO DO TABULEIRO"))
-	var board_grid: GridContainer = _make_card_grid(_responsive_columns(4))
-	for style in BOARD_STYLE_OPTIONS:
-		var label: String = String(style["name"])
-		if ScoreStore.selected_board_style == String(style["id"]):
-			label += "  // ATIVO"
-		board_grid.add_child(_make_button(label, Callable(self, "_set_board_style").bind(String(style["id"]))))
-	content_box.add_child(board_grid)
-
-	content_box.add_child(_make_section_label("AUDIO"))
-	var audio_grid: GridContainer = _make_card_grid(_responsive_columns(4))
-	audio_grid.add_child(_make_button("AUDIO: OFF" if ScoreStore.audio_muted else "AUDIO: ON", _toggle_audio_from_settings))
-	for sound in SOUND_THEME_OPTIONS:
-		var label: String = String(sound["name"])
-		if ScoreStore.selected_sound_theme == String(sound["id"]):
-			label += "  // ATIVO"
-		audio_grid.add_child(_make_button(label, Callable(self, "_set_sound_theme").bind(String(sound["id"]))))
-	content_box.add_child(audio_grid)
+func _show_settings_section(section: String) -> void:
+	active_settings_section = section
+	var names: Dictionary = {"theme": "APARÊNCIA", "palette": "PALETA", "board": "TABULEIRO", "audio": "ÁUDIO"}
+	_show_collection_screen(String(names.get(section, "CONFIGURAÇÕES")), "Personalize sua experiência", "As alterações são aplicadas e salvas imediatamente.")
+	_set_back_action(_show_settings)
+	if section == "theme":
+		content_box.add_child(_make_section_label("☀  TEMA DA INTERFACE"))
+		var theme_grid: GridContainer = _make_card_grid(2)
+		theme_grid.add_child(_make_button("TEMA CLARO" if not ScoreStore.is_light_theme() else "TEMA CLARO  // ATIVO", Callable(self, "_set_visual_theme").bind("light")))
+		theme_grid.add_child(_make_button("TEMA ESCURO" if ScoreStore.is_light_theme() else "TEMA ESCURO  // ATIVO", Callable(self, "_set_visual_theme").bind("dark")))
+		content_box.add_child(theme_grid)
+	elif section == "palette":
+		content_box.add_child(_make_section_label("◈  PALETAS DE FUNDO"))
+		var palette_grid: GridContainer = _make_card_grid(3)
+		for theme in BACKGROUND_THEME_OPTIONS:
+			var label: String = String(theme["name"])
+			if ScoreStore.selected_background == String(theme["id"]):
+				label += "  // ATIVA"
+			palette_grid.add_child(_make_button(label, Callable(self, "_set_background_theme").bind(String(theme["id"]))))
+		content_box.add_child(palette_grid)
+	elif section == "board":
+		content_box.add_child(_make_section_label("▦  ESTILOS DO TABULEIRO"))
+		var board_grid: GridContainer = _make_card_grid(3)
+		for style in BOARD_STYLE_OPTIONS:
+			var label: String = "%s  %s\n%s" % [String(style["icon"]), String(style["name"]), String(style["pattern"])]
+			if ScoreStore.selected_board_style == String(style["id"]):
+				label += "  // ATIVO"
+			board_grid.add_child(_make_button(label, Callable(self, "_set_board_style").bind(String(style["id"]))))
+		content_box.add_child(board_grid)
+	elif section == "audio":
+		content_box.add_child(_make_section_label("♫  ÁUDIO E EFEITOS"))
+		var audio_grid: GridContainer = _make_card_grid(3)
+		audio_grid.add_child(_make_button("AUDIO: OFF" if ScoreStore.audio_muted else "AUDIO: ON", _toggle_audio_from_settings))
+		for sound in SOUND_THEME_OPTIONS:
+			var label: String = String(sound["name"])
+			if ScoreStore.selected_sound_theme == String(sound["id"]):
+				label += "  // ATIVO"
+				audio_grid.add_child(_make_button(label, Callable(self, "_set_sound_theme").bind(String(sound["id"]))))
+		content_box.add_child(audio_grid)
+		content_box.add_child(_make_section_label("♫  MÚSICA DE FUNDO"))
+		var music_grid: GridContainer = _make_card_grid(2)
+		for music in MUSIC_THEME_OPTIONS:
+			var music_id: String = String(music["id"])
+			var owned: bool = ScoreStore.is_reward_unlocked(music_id) or ScoreStore.is_item_purchased(music_id)
+			var music_label: String = String(music["name"])
+			if ScoreStore.selected_music_theme == music_id:
+				music_label += "  // ATIVA"
+			elif not owned:
+				music_label += "  // BLOQUEADA"
+			var music_button: Button = _make_button(music_label, Callable(self, "_set_music_theme").bind(music_id))
+			music_button.disabled = not owned
+			music_grid.add_child(music_button)
+		content_box.add_child(music_grid)
 	_apply_responsive_layout()
 
 
 func _show_account() -> void:
 	_show_collection_screen("CONTA E NUVEM", SupabaseClient.auth_label(), "Use email e senha. Ao criar conta, confirme o email antes de entrar.")
+	_set_back_action(_show_profile)
 	if not SupabaseClient.is_configured():
 		content_box.add_child(_make_info_card("Envie a URL do projeto Supabase e a chave publica anon/publishable para eu configurar no codigo."))
 		return
 	if SupabaseClient.last_error != "":
-		content_box.add_child(_make_info_card(SupabaseClient.last_error))
+		content_box.add_child(_make_info_card(SupabaseClient.user_facing_error()))
 	if SupabaseClient.is_signed_in():
+		content_box.add_child(_make_info_card("Progresso protegido na nuvem. A sincronização acontece automaticamente enquanto você joga."))
 		content_box.add_child(_make_button("SINCRONIZAR AGORA", _sync_cloud_now))
 		content_box.add_child(_make_button("SAIR DA CONTA", _sign_out_cloud))
 		return
-	content_box.add_child(_make_info_card("Crie a conta com um email real. O Supabase envia o email de confirmacao automaticamente quando a confirmacao estiver ativada no projeto."))
+	content_box.add_child(_make_info_card("Entre para recuperar seu progresso em qualquer aparelho ou crie uma conta gratuita."))
+	var account_grid: GridContainer = _make_card_grid(2)
+	account_grid.add_child(_make_feature_tile("ENTRAR", "Acesse uma conta já existente.", "●  CONTA", _show_login_form, Color(0.0, 0.82, 1.0, 0.82)))
+	account_grid.add_child(_make_feature_tile("CRIAR CONTA", "Proteja seu progresso com email e senha.", "+  NOVO JOGADOR", _show_signup_form, Color(0.34, 1.0, 0.68, 0.82)))
+	content_box.add_child(account_grid)
+	_apply_responsive_layout()
 
-	content_box.add_child(_make_section_label("CRIAR CONTA"))
+
+func _show_signup_form() -> void:
+	_show_collection_screen("CRIAR CONTA", "Proteja seu progresso", "Use um email válido. Você poderá precisar confirmá-lo antes de entrar.")
+	_set_back_action(_show_account)
 	var create_name_input: LineEdit = _make_text_input("nome do usuario")
 	content_box.add_child(create_name_input)
 	var create_email_input: LineEdit = _make_text_input("email")
@@ -563,8 +726,12 @@ func _show_account() -> void:
 	var create_password_confirm_input: LineEdit = _make_text_input("repetir senha", true)
 	content_box.add_child(create_password_confirm_input)
 	content_box.add_child(_make_button("CRIAR E ENVIAR CONFIRMACAO", Callable(self, "_create_account_from_fields").bind(create_name_input, create_email_input, create_password_input, create_password_confirm_input)))
+	_apply_responsive_layout()
 
-	content_box.add_child(_make_section_label("ENTRAR"))
+
+func _show_login_form() -> void:
+	_show_collection_screen("ENTRAR", "Continue de onde parou", "Seu progresso será carregado e sincronizado automaticamente.")
+	_set_back_action(_show_account)
 	var login_email_input: LineEdit = _make_text_input("email")
 	content_box.add_child(login_email_input)
 	var login_password_input: LineEdit = _make_text_input("senha", true)
@@ -575,6 +742,7 @@ func _show_account() -> void:
 
 func _show_profile_editor() -> void:
 	_show_collection_screen("EDITAR PERFIL", ScoreStore.display_name, "Escolha itens comprados ou liberados.")
+	_set_back_action(_show_profile)
 	var name_input: LineEdit = LineEdit.new()
 	name_input.text = ScoreStore.display_name
 	name_input.placeholder_text = "nome do jogador"
@@ -591,6 +759,7 @@ func _show_profile_editor() -> void:
 
 func _show_friends() -> void:
 	_show_collection_screen("AMIGOS", "Convites e partidas", "Estrutura de amigos pronta no banco. Convites online entram na etapa de Realtime/matchmaking.")
+	_set_back_action(_show_profile)
 	content_box.add_child(_make_info_card("Voce podera adicionar amigos, aceitar convites e chamar para partidas. As tabelas e policies estao no SQL incluido."))
 	content_box.add_child(_make_button("ADICIONAR AMIGO", Callable(self, "_show_unavailable_notice").bind("Busca por jogador sera ligada ao Supabase apos configurar o projeto.")))
 	_apply_responsive_layout()
@@ -598,6 +767,7 @@ func _show_friends() -> void:
 
 func _show_match_history() -> void:
 	_show_collection_screen("HISTORICO", "Ultimas partidas", "Historico local e em nuvem quando conectado.")
+	_set_back_action(_show_profile)
 	if not SupabaseClient.is_signed_in():
 		content_box.add_child(_make_info_card("Entre em uma conta para carregar o historico salvo no Supabase."))
 		_apply_responsive_layout()
@@ -612,6 +782,7 @@ func _show_match_history() -> void:
 
 func _show_leaderboard() -> void:
 	_show_collection_screen("RANKING", "Top jogadores", "Ordenado por pontuacao multiplayer.")
+	_set_back_action(_show_multiplayer)
 	var rows: Array = await SupabaseClient.fetch_leaderboard()
 	if rows.is_empty():
 		content_box.add_child(_make_info_card("Ranking indisponivel ate configurar Supabase e jogar partidas ranqueadas."))
@@ -680,6 +851,10 @@ func _start_survival() -> void:
 
 
 func _start_phase(phase_number: int) -> void:
+	if ScoreStore.season_phase_completed(_season_key(), phase_number):
+		_show_season_phases()
+		status_label.text = "Fase %02d já concluída. Escolha uma fase disponível." % phase_number
+		return
 	session_id += 1
 	screen_state = "game"
 	gameplay_mode = "phase"
@@ -720,17 +895,38 @@ func _next_round(current_session: int) -> void:
 	accepting_input = false
 	board.enabled = false
 	input_index = 0
+	var previous_sequence: Array[int] = sequence.duplicate()
 	sequence.clear()
 	var sequence_length: int = score + 1
 	for i in range(sequence_length):
-		sequence.append(rng.randi_range(0, 3))
+		var next_color: int = rng.randi_range(0, 3)
+		if sequence.size() >= 2 and sequence[-1] == sequence[-2]:
+			while next_color == sequence[-1]:
+				next_color = rng.randi_range(0, 3)
+		sequence.append(next_color)
+	# Cada rodada é uma nova sequência aleatória, não a rodada anterior com um
+	# item anexado. Em uma coincidência completa, troca o último sinal.
+	if sequence.size() > 1 and sequence == previous_sequence:
+		var replacement: int = rng.randi_range(0, 3)
+		while replacement == sequence[-1]:
+			replacement = rng.randi_range(0, 3)
+		sequence[-1] = replacement
 	_update_score_label()
+	await _play_current_sequence(current_session)
+
+
+func _play_current_sequence(current_session: int) -> void:
+	accepting_input = false
+	board.enabled = false
+	input_index = 0
+	if replay_pattern_button != null:
+		replay_pattern_button.disabled = true
 	await get_tree().create_timer(0.3).timeout
 	if current_session != session_id:
 		return
 	for color_index in sequence:
 		_play_pad_tone(color_index, 0.18)
-		await board.flash_pad(color_index, flash_time)
+		await board.flash_pad(color_index, clampf(flash_time - float(score) * 0.008, 0.2, flash_time))
 		if current_session != session_id:
 			return
 		await get_tree().create_timer(maxf(0.07, flash_time * 0.3)).timeout
@@ -738,11 +934,22 @@ func _next_round(current_session: int) -> void:
 			return
 	accepting_input = true
 	board.enabled = true
+	if replay_pattern_button != null:
+		replay_pattern_button.disabled = false
+
+
+func _on_replay_pattern_pressed() -> void:
+	if not accepting_input or sequence.is_empty():
+		return
+	var current_session: int = session_id
+	Input.vibrate_handheld(18)
+	await _play_current_sequence(current_session)
 
 
 func _on_pad_pressed(index: int) -> void:
 	if not accepting_input:
 		return
+	Input.vibrate_handheld(12)
 	var current_session: int = session_id
 	accepting_input = false
 	board.enabled = false
@@ -768,7 +975,9 @@ func _on_pad_pressed(index: int) -> void:
 		_check_achievements()
 		_show_reward_notice(reward_names, previous_level)
 		await get_tree().create_timer(0.42).timeout
-		if current_session == session_id:
+		if current_session == session_id and gameplay_mode == "phase" and score >= current_phase_goal:
+			_finish_game()
+		elif current_session == session_id:
 			_next_round(current_session)
 	else:
 		accepting_input = true
@@ -789,14 +998,18 @@ func _finish_game() -> void:
 	root_box.alignment = BoxContainer.ALIGNMENT_CENTER
 
 	var new_record: bool = false
+	var phase_reward_text: String = ""
 	if gameplay_mode == "survival":
 		new_record = ScoreStore.record_survival(score)
 		_check_achievements()
 	else:
-		if score >= current_phase_goal:
+		var phase_completed: bool = score >= current_phase_goal
+		ScoreStore.record_phase_result(score, phase_completed)
+		if phase_completed:
 			var season_key: String = _season_key()
 			var reward: Dictionary = ScoreStore.complete_season_phase(season_key, current_phase)
-			status_label.text = "Fase %02d completa! Recompensa: %d ouro, %d diamantes" % [current_phase, int(reward["gold"]), int(reward["diamonds"])]
+			status_label.text = "Fase %02d completa! Recompensa: %d ouro, %d diamantes%s" % [current_phase, int(reward["gold"]), int(reward["diamonds"]), " e item especial" if String(reward.get("item", "")) != "" else ""]
+			phase_reward_text = "+%d OURO  •  +%d DIAMANTES%s" % [int(reward["gold"]), int(reward["diamonds"]), "  •  ITEM ESPECIAL" if String(reward.get("item", "")) != "" else ""]
 			_check_achievements()
 		else:
 			status_label.text = "Fase %02d falhou. Tente novamente." % current_phase
@@ -817,6 +1030,11 @@ func _finish_game() -> void:
 	var result_score: Label = _make_label("Pontuacao: %d" % score, 16, Color(0.72, 0.84, 1.0))
 	content_box.add_child(result_title)
 	content_box.add_child(result_score)
+	if gameplay_mode == "phase":
+		var phase_result: String = "Você concluiu as %d sequências da fase." % current_phase_goal if score >= current_phase_goal else "Você concluiu %d de %d sequências." % [score, current_phase_goal]
+		if phase_reward_text != "":
+			phase_result += "\nRECOMPENSA  •  %s" % phase_reward_text
+		content_box.add_child(_make_info_card(phase_result))
 	if gameplay_mode == "survival":
 		content_box.add_child(_make_button("JOGAR NOVAMENTE", _start_survival))
 	else:
@@ -847,6 +1065,7 @@ func _create_account_from_fields(name_input: LineEdit, email_input: LineEdit, pa
 		status_label.text = "As senhas nao conferem."
 		return
 	await SupabaseClient.sign_up(name, email, password)
+	_apply_owner_access()
 	_show_account()
 	status_label.text = SupabaseClient.last_error if SupabaseClient.last_error != "" else "Verifique seu email para confirmar a conta."
 
@@ -856,12 +1075,22 @@ func _login_from_fields(email_input: LineEdit, password_input: LineEdit) -> void
 		status_label.text = "Informe email e senha para entrar."
 		return
 	var ok: bool = await SupabaseClient.sign_in(email_input.text, password_input.text)
+	if ok:
+		_apply_owner_access()
 	var message: String = SupabaseClient.last_error
 	if not ok:
 		status_label.text = SupabaseClient.last_error
 	_show_account()
 	if not ok and message != "":
 		status_label.text = message
+
+
+func _apply_owner_access() -> void:
+	if not SupabaseClient.is_signed_in():
+		return
+	if SupabaseClient.user_email.strip_edges().to_lower() != OWNER_EMAIL:
+		return
+	ScoreStore.grant_all_content(REWARDS, SHOP_ITEMS)
 
 
 func _sync_cloud_now() -> void:
@@ -891,7 +1120,10 @@ func _reset_season_phases() -> void:
 
 func _buy_shop_item(item: Dictionary) -> void:
 	var ok: bool = ScoreStore.purchase_item(String(item["id"]), String(item["currency"]), int(item["cost"]))
-	_show_shop()
+	if active_shop_kind != "":
+		_show_shop_category(active_shop_kind)
+	else:
+		_show_shop()
 	status_label.text = "Item comprado." if ok else "Moedas insuficientes."
 
 
@@ -927,7 +1159,8 @@ func _clear_boxes() -> void:
 
 func _make_button_grid(columns: int = 2) -> GridContainer:
 	var grid: GridContainer = GridContainer.new()
-	grid.columns = columns
+	grid.set_meta("max_columns", columns)
+	grid.columns = _responsive_columns(columns)
 	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	grid.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	grid.add_theme_constant_override("hseparation", 14)
@@ -954,31 +1187,43 @@ func _responsive_columns(default_columns: int = 2) -> int:
 	var viewport_size: Vector2 = size
 	if viewport_size.x <= 1.0:
 		viewport_size = get_viewport_rect().size
-	if viewport_size.x >= 1540 and viewport_size.y >= 700:
-		return max(default_columns, 4)
-	if viewport_size.x >= 1120 and viewport_size.y >= 520:
-		return max(default_columns, 3)
-	return default_columns
+	if viewport_size.x < 620.0:
+		return 1
+	if viewport_size.x < 980.0:
+		return mini(default_columns, 2)
+	if viewport_size.x < 1380.0:
+		return mini(default_columns, 3)
+	return mini(default_columns, 4)
 
 
-func _make_feature_tile(title: String, description: String, meta: String, callback: Callable, accent: Color) -> PanelContainer:
+func _refresh_responsive_grids(node: Node) -> void:
+	if node is GridContainer and node.has_meta("max_columns"):
+		(node as GridContainer).columns = _responsive_columns(int(node.get_meta("max_columns")))
+	for child in node.get_children():
+		_refresh_responsive_grids(child)
+
+
+func _make_feature_tile(title: String, description: String, meta: String, callback: Callable, accent: Color, disabled: bool = false) -> PanelContainer:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	panel.custom_minimum_size = Vector2(0, 164)
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.custom_minimum_size = Vector2(0, 214)
 	var fill: Color = Color(0.95, 0.98, 1.0, 0.9) if ScoreStore.is_light_theme() else Color(0.012, 0.018, 0.038, 0.93)
 	panel.add_theme_stylebox_override("panel", _button_style(fill, accent, 16))
 
 	var box: VBoxContainer = VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 8)
 	panel.add_child(box)
 
 	var meta_label: Label = _make_label(meta, 12, accent)
+	meta_label.custom_minimum_size = Vector2(0, 18)
 	meta_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	box.add_child(meta_label)
 
 	var title_label: Label = _make_label(title, 20, Color(0.03, 0.08, 0.14) if ScoreStore.is_light_theme() else Color(0.96, 0.99, 1.0))
+	title_label.custom_minimum_size = Vector2(0, 30)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(title_label)
@@ -987,10 +1232,12 @@ func _make_feature_tile(title: String, description: String, meta: String, callba
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	desc_label.custom_minimum_size = Vector2(0, 48)
 	box.add_child(desc_label)
 
 	var button: Button = _make_button(_feature_tile_action(title, meta), callback)
-	button.custom_minimum_size = Vector2(0, 46)
+	button.custom_minimum_size = Vector2(0, 58)
+	button.disabled = disabled
 	box.add_child(button)
 	return panel
 
@@ -1025,6 +1272,12 @@ func _feature_tile_action(title: String, meta: String) -> String:
 			return "VER RANKING"
 		"CONTA":
 			return "GERENCIAR"
+		"CRIAR CONTA":
+			return "COMEÇAR"
+		"AVATARES", "BANNERS", "ESTILOS DE NOME", "MÚSICAS":
+			return "VER ITENS"
+		"APARÊNCIA", "PALETA", "TABULEIRO", "ÁUDIO":
+			return "CONFIGURAR"
 		"EDITAR":
 			return "EDITAR"
 		"CUSTOMIZACAO":
@@ -1038,16 +1291,18 @@ func _feature_tile_action(title: String, meta: String) -> String:
 		"HISTORICO":
 			return "VER HISTORICO"
 		_:
-			if meta == "FASE" or meta == "CONCLUIDA":
+			if meta == "CONCLUIDA":
+				return "CONCLUÍDA"
+			if meta == "FASE":
 				return "JOGAR"
 	return "SELECIONAR"
 
 
 func _make_phase_tile(phase: int, completed: bool) -> PanelContainer:
 	var meta: String = "CONCLUIDA" if completed else "FASE"
-	var description: String = "Sequencia alvo: %d" % clamp(4 + int((phase - 1) / 3), 4, 20)
+	var description: String = "Recompensa resgatada" if completed else "Sequencia alvo: %d" % clamp(4 + int((phase - 1) / 3), 4, 20)
 	var accent: Color = Color(0.32, 1.0, 0.72, 0.78) if completed else Color(0.0, 0.78, 1.0, 0.78)
-	return _make_feature_tile("%02d" % phase, description, meta, Callable(self, "_start_phase").bind(phase), accent)
+	return _make_feature_tile("%02d" % phase, description, meta, Callable(self, "_start_phase").bind(phase), accent, completed)
 
 
 func _make_button(text: String, callback: Callable) -> Button:
@@ -1145,6 +1400,11 @@ func _set_back_target(target: String) -> void:
 		back_button.visible = target != ""
 
 
+func _set_back_action(action: Callable) -> void:
+	current_back_action = action
+	_set_back_target("previous" if action.is_valid() else "")
+
+
 func _on_back_pressed() -> void:
 	_handle_back_request()
 
@@ -1154,11 +1414,22 @@ func _handle_back_request() -> void:
 		if in_game_options != null and not in_game_options.visible:
 			in_game_options.visible = true
 		else:
-			_show_menu()
+			if gameplay_mode == "phase":
+				_show_season_phases()
+			else:
+				_show_game_modes()
 		return
 
 	if screen_state == "collection" or screen_state == "game_over":
-		_show_menu()
+		if screen_state == "game_over":
+			if gameplay_mode == "phase":
+				_show_season_phases()
+			else:
+				_show_game_modes()
+		elif current_back_action.is_valid():
+			current_back_action.call()
+		else:
+			_show_menu()
 		return
 
 	if current_back_target == "menu":
@@ -1169,15 +1440,23 @@ func _set_game_chrome(in_game: bool) -> void:
 	hud_panel.visible = in_game
 	hud_reward_label.visible = false
 	options_button.visible = in_game
+	replay_pattern_button.visible = in_game
+	if in_game:
+		replay_pattern_button.text = "↻"
 	in_game_options.visible = false
 	_update_mute_button()
 
 
 func _update_hud() -> void:
 	var xp_needed: int = ScoreStore.xp_to_next_survival_level()
-	hud_record_label.text = "RECORDE %d" % ScoreStore.best_survival
-	hud_points_label.text = "PONTOS %d" % score
-	hud_level_label.text = "NIVEL %d" % ScoreStore.survival_level
+	if gameplay_mode == "phase":
+		hud_record_label.text = "FASE %02d" % current_phase
+		hud_points_label.text = "SEQUÊNCIA %d/%d" % [mini(score + 1, current_phase_goal), current_phase_goal]
+		hud_level_label.text = "META %d" % current_phase_goal
+	else:
+		hud_record_label.text = "RECORDE %d" % ScoreStore.best_survival
+		hud_points_label.text = "PONTOS %d" % score
+		hud_level_label.text = "NIVEL %d" % ScoreStore.survival_level
 	hud_xp_bar.max_value = xp_needed
 	hud_xp_bar.value = clampi(ScoreStore.survival_xp, 0, xp_needed)
 	hud_xp_label.text = "XP %d/%d   NIVEL %d -> %d" % [ScoreStore.survival_xp, xp_needed, ScoreStore.survival_level, ScoreStore.survival_level + 1]
@@ -1194,30 +1473,36 @@ func _toggle_audio() -> void:
 
 func _toggle_audio_from_settings() -> void:
 	ScoreStore.set_audio_muted(not ScoreStore.audio_muted)
-	_show_settings()
+	_show_settings_section("audio")
 
 
 func _set_visual_theme(value: String) -> void:
 	ScoreStore.set_visual_theme(value)
 	_apply_unlocked_visuals()
-	_show_settings()
+	_show_settings_section("theme")
 
 
 func _set_background_theme(theme_id: String) -> void:
 	ScoreStore.set_background_theme(theme_id)
 	_apply_unlocked_visuals()
-	_show_settings()
+	_show_settings_section("palette")
 
 
 func _set_board_style(style_id: String) -> void:
 	ScoreStore.set_board_style(style_id)
 	_apply_unlocked_visuals()
-	_show_settings()
+	_show_settings_section("board")
 
 
 func _set_sound_theme(theme_id: String) -> void:
 	ScoreStore.set_sound_theme(theme_id)
-	_show_settings()
+	_show_settings_section("audio")
+
+
+func _set_music_theme(theme_id: String) -> void:
+	ScoreStore.set_music_theme(theme_id)
+	music_note_index = 0
+	_show_settings_section("audio")
 
 
 func _update_mute_button() -> void:
@@ -1227,11 +1512,13 @@ func _update_mute_button() -> void:
 
 func _show_success_feedback() -> void:
 	board.call("show_feedback", "success")
+	Input.vibrate_handheld(20)
 	_play_tone(880.0, 0.12)
 
 
 func _show_error_feedback() -> void:
 	board.call("show_feedback", "error")
+	Input.vibrate_handheld(70)
 	_play_tone(130.0, 0.28)
 
 
@@ -1264,6 +1551,49 @@ func _play_tone(frequency: float, duration: float) -> void:
 		var t: float = float(frame) / mix_rate
 		var fade: float = minf(1.0, float(frames - frame) / maxf(1.0, mix_rate * 0.04))
 		var sample: float = sin(TAU * frequency * t) * 0.22 * fade
+		playback.push_frame(Vector2(sample, sample))
+
+
+func _on_music_tick() -> void:
+	if ScoreStore.audio_muted or music_player == null:
+		return
+	var melody: Array[float] = _music_melody(ScoreStore.selected_music_theme)
+	if melody.is_empty():
+		return
+	var frequency: float = melody[music_note_index % melody.size()]
+	music_note_index += 1
+	_play_music_tone(frequency, minf(0.38, music_timer.wait_time * 0.86))
+
+
+func _music_melody(theme_id: String) -> Array[float]:
+	match theme_id:
+		"music_focus":
+			return [220.0, 261.63, 329.63, 261.63, 246.94, 293.66, 349.23, 293.66]
+		"music_starlight":
+			return [329.63, 392.0, 493.88, 659.25, 493.88, 440.0, 392.0, 329.63]
+		"music_legend":
+			return [196.0, 293.66, 392.0, 493.88, 392.0, 587.33, 493.88, 293.66]
+		"music_arcade":
+			return [261.63, 329.63, 392.0, 523.25, 392.0, 329.63, 293.66, 349.23]
+		"music_dream":
+			return [174.61, 220.0, 261.63, 329.63, 293.66, 261.63, 220.0, 196.0]
+		_:
+			return [196.0, 246.94, 293.66, 369.99, 293.66, 246.94, 220.0, 261.63]
+
+
+func _play_music_tone(frequency: float, duration: float) -> void:
+	music_player.stop()
+	music_player.play()
+	var playback: AudioStreamGeneratorPlayback = music_player.get_stream_playback()
+	if playback == null:
+		return
+	var mix_rate: float = 44100.0
+	var frames: int = int(mix_rate * duration)
+	for frame in range(frames):
+		var t: float = float(frame) / mix_rate
+		var attack: float = minf(1.0, t / 0.025)
+		var release: float = minf(1.0, float(frames - frame) / (mix_rate * 0.11))
+		var sample: float = (sin(TAU * frequency * t) + sin(TAU * frequency * 0.5 * t) * 0.24) * 0.055 * attack * release
 		playback.push_frame(Vector2(sample, sample))
 
 
@@ -1380,12 +1710,27 @@ func _achievement_count() -> int:
 
 
 func _check_achievements() -> void:
+	var reward_gold: int = 0
+	var reward_diamonds: int = 0
+	var reward_items: Array[String] = []
 	for achievement in ACHIEVEMENTS:
 		var id: String = String(achievement["id"])
 		if ScoreStore.is_achievement_unlocked(id):
 			continue
 		if _achievement_requirement_met(achievement):
-			ScoreStore.unlock_achievement(id)
+			if ScoreStore.unlock_achievement(id):
+				var achievement_reward: Dictionary = ACHIEVEMENT_REWARDS.get(id, {"gold": 50, "diamonds": 0})
+				reward_gold += int(achievement_reward.get("gold", 0))
+				reward_diamonds += int(achievement_reward.get("diamonds", 0))
+				var item_id: String = String(achievement_reward.get("item", ""))
+				if item_id != "":
+					ScoreStore.unlock_reward(item_id, "music")
+					reward_items.append(item_id)
+	if reward_gold > 0 or reward_diamonds > 0 or not reward_items.is_empty():
+		ScoreStore.add_currency(reward_gold, reward_diamonds)
+		if hud_reward_label != null:
+			hud_reward_label.text = "CONQUISTA: +%d OURO  +%d DIAMANTES%s" % [reward_gold, reward_diamonds, "  + ITEM" if not reward_items.is_empty() else ""]
+			hud_reward_label.visible = true
 
 
 func _achievement_requirement_met(achievement: Dictionary) -> bool:
@@ -1399,7 +1744,24 @@ func _achievement_requirement_met(achievement: Dictionary) -> bool:
 		return ScoreStore.survival_level >= value
 	if type == "rewards":
 		return ScoreStore.unlocked_reward_count() >= value
+	if type == "phases":
+		return ScoreStore.completed_phase_count() >= value
+	if type == "gold":
+		return ScoreStore.gold >= value
 	return false
+
+
+func _item_group_label(kind: String) -> String:
+	match kind:
+		"avatar":
+			return "●  AVATARES"
+		"banner":
+			return "▰  BANNERS"
+		"name_style":
+			return "✦  ESTILOS DE NOME"
+		"music":
+			return "♫  MÚSICAS"
+	return "ITENS"
 
 
 func _make_info_card(text: String) -> PanelContainer:
@@ -1418,6 +1780,8 @@ func _make_shop_card(item: Dictionary) -> PanelContainer:
 	var owned: bool = ScoreStore.is_item_purchased(id)
 	var panel: PanelContainer = PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.custom_minimum_size = Vector2(0, 142)
 	var border: Color = Color(0.0, 0.95, 0.78, 0.72) if owned else Color(1.0, 0.64, 0.0, 0.74)
 	panel.add_theme_stylebox_override("panel", _button_style(Color(0.014, 0.021, 0.04, 0.92), border, 12))
 	var box: VBoxContainer = VBoxContainer.new()
@@ -1425,7 +1789,7 @@ func _make_shop_card(item: Dictionary) -> PanelContainer:
 	panel.add_child(box)
 	var currency: String = String(item["currency"])
 	var cost: int = int(item["cost"])
-	var title: Label = _make_label("%s  // %s" % [String(item["name"]), "COMPRADO" if owned else "%d %s" % [cost, currency.to_upper()]], 16, Color(0.96, 0.99, 1.0))
+	var title: Label = _make_label("%s  %s  // %s" % [_item_group_label(String(item["kind"])).left(1), String(item["name"]), "COMPRADO" if owned else "%d %s" % [cost, currency.to_upper()]], 16, Color(0.96, 0.99, 1.0))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	box.add_child(title)
 	var button: Button = _make_button("USAR NO PERFIL" if owned else "COMPRAR", Callable(self, "_buy_shop_item").bind(item))
@@ -1449,6 +1813,8 @@ func _make_achievement_card(achievement: Dictionary) -> PanelContainer:
 	var unlocked: bool = ScoreStore.is_achievement_unlocked(String(achievement["id"]))
 	var panel: PanelContainer = PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.custom_minimum_size = Vector2(0, 118)
 	var border: Color = Color(1.0, 0.64, 0.0, 0.84) if unlocked else Color(0.0, 0.64, 1.0, 0.48)
 	panel.add_theme_stylebox_override("panel", _button_style(Color(0.018, 0.026, 0.048, 0.92), border, 12))
 	var box: VBoxContainer = VBoxContainer.new()
@@ -1461,6 +1827,16 @@ func _make_achievement_card(achievement: Dictionary) -> PanelContainer:
 	requirement.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	requirement.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(requirement)
+	var achievement_reward: Dictionary = ACHIEVEMENT_REWARDS.get(String(achievement["id"]), {"gold": 50, "diamonds": 0})
+	var reward_text: String = "RECOMPENSA  •  %d OURO" % int(achievement_reward.get("gold", 0))
+	if int(achievement_reward.get("diamonds", 0)) > 0:
+		reward_text += "  •  %d DIAMANTES" % int(achievement_reward["diamonds"])
+	if String(achievement_reward.get("item", "")) != "":
+		reward_text += "  •  ITEM ESPECIAL"
+	var reward_label: Label = _make_label(reward_text, 13, Color(1.0, 0.76, 0.22))
+	reward_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	reward_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(reward_label)
 	return panel
 
 
@@ -1471,6 +1847,8 @@ func _make_reward_card(reward: Dictionary, selectable: bool) -> PanelContainer:
 	var selected: bool = (kind == "background" and ScoreStore.selected_background == id) or (kind == "board" and ScoreStore.selected_board_style == id)
 	var panel: PanelContainer = PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	panel.custom_minimum_size = Vector2(0, 190 if selectable else 126)
 	var border: Color = Color(1.0, 0.78, 0.2, 0.82) if selected else (Color(0.0, 0.95, 0.78, 0.72) if unlocked else Color(0.22, 0.32, 0.48, 0.52))
 	panel.add_theme_stylebox_override("panel", _button_style(Color(0.014, 0.021, 0.04, 0.92), border, 12))
 	var box: VBoxContainer = VBoxContainer.new()
@@ -1484,6 +1862,13 @@ func _make_reward_card(reward: Dictionary, selectable: bool) -> PanelContainer:
 	requirement.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	requirement.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(requirement)
+	if kind == "board":
+		for style in BOARD_STYLE_OPTIONS:
+			if String(style["id"]) == id:
+				var visual: Label = _make_label("%s  %s" % [String(style["icon"]), String(style["pattern"])], 13, Color(0.62, 0.84, 1.0))
+				visual.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+				box.add_child(visual)
+				break
 	if selectable:
 		var button: Button = _make_button("USAR" if unlocked else "BLOQUEADO", Callable(self, "_select_reward").bind(id, kind))
 		button.disabled = not unlocked
@@ -1535,6 +1920,7 @@ func _apply_responsive_layout() -> void:
 	responsive_layout_queued = false
 	if root_box == null:
 		return
+	_refresh_responsive_grids(root_box)
 	var viewport_size: Vector2 = size
 	if viewport_size.x <= 1.0 or viewport_size.y <= 1.0:
 		viewport_size = get_viewport_rect().size
@@ -1591,15 +1977,19 @@ func _apply_responsive_layout() -> void:
 	_set_label_font(status_label, body_size)
 	menu_logo.custom_minimum_size = Vector2(root_box.custom_minimum_size.x, clampf(float(logo_size) * 1.28, 128.0, 232.0))
 
-	var board_limit_by_width: float = minf(viewport_size.x - float(horizontal_margin * 2), root_box.custom_minimum_size.x * 1.22)
+	var board_limit_by_width: float = minf(viewport_size.x - float(horizontal_margin * 2), root_box.custom_minimum_size.x * 1.28)
 	var available_game_height: float = viewport_size.y - gameplay_top_margin - safe_insets.w - float(vertical_margin)
 	var board_limit_by_height: float = available_game_height * (0.98 if gameplay_layout else (0.54 if landscape else 0.62))
 	var board_min: float = 340.0 if low_height else 410.0
-	var board_max: float = 610.0 if not wide else 740.0
+	var board_max: float = 680.0 if not wide else 820.0
 	if compact:
 		board_min = 320.0
-	var board_size: float = clampf(minf(board_limit_by_width, board_limit_by_height), board_min, board_max)
-	board.custom_minimum_size = Vector2(board_size, board_size)
+	var board_width: float = clampf(minf(board_limit_by_width, board_limit_by_height * 1.28), board_min, board_max)
+	var board_height: float = board_width * 0.78
+	if board_height > board_limit_by_height:
+		board_height = board_limit_by_height
+		board_width = board_height * 1.28
+	board.custom_minimum_size = Vector2(board_width, board_height)
 
 	var button_width: float = minf(root_box.custom_minimum_size.x, 560.0 if wide else 450.0)
 	var button_height: float = clampf(shortest * (0.125 if low_height else 0.145), 56.0, 82.0)
@@ -1615,6 +2005,12 @@ func _apply_responsive_layout() -> void:
 		options_button.custom_minimum_size = Vector2(icon_size, icon_size)
 		options_button.position = Vector2(maxf(horizontal_margin * 0.55, safe_insets.x + 10.0), maxf(vertical_margin * 0.65, safe_insets.y + 8.0))
 		options_button.add_theme_font_size_override("font_size", int(clampf(icon_size * 0.34, 16.0, 22.0)))
+	if replay_pattern_button != null:
+		var replay_size: float = clampf(shortest * 0.115, 44.0, 56.0)
+		replay_pattern_button.custom_minimum_size = Vector2(replay_size, replay_size)
+		replay_pattern_button.size = replay_pattern_button.custom_minimum_size
+		replay_pattern_button.position = Vector2(options_button.position.x, options_button.position.y + options_button.custom_minimum_size.y + 10.0)
+		replay_pattern_button.add_theme_font_size_override("font_size", int(clampf(replay_size * 0.46, 20.0, 27.0)))
 	if in_game_options != null:
 		in_game_options.position = Vector2(options_button.position.x, options_button.position.y + options_button.custom_minimum_size.y + 10.0)
 		_apply_button_metrics(in_game_options, clampf(shortest * 0.42, 156.0, 196.0), clampf(shortest * 0.112, 46.0, 54.0), int(clampf(shortest * 0.034, 13.0, 15.0)))

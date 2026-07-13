@@ -147,6 +147,7 @@ var input_index: int = 0
 var score: int = 0
 var accepting_input: bool = false
 var gameplay_mode: String = "menu"
+var mobile_orientation: String = "sensor"
 var current_phase: int = 0
 var current_phase_goal: int = 0
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -157,6 +158,8 @@ var screen_state: String = "menu"
 var responsive_layout_queued: bool = false
 var active_shop_kind: String = ""
 var active_settings_section: String = ""
+var touch_scroll_dragging: bool = false
+var touch_scroll_distance: float = 0.0
 
 var root_box: VBoxContainer
 var top_bar: HBoxContainer
@@ -196,6 +199,7 @@ var splash_root: Control
 
 func _ready() -> void:
 	rng.randomize()
+	_configure_platform_window()
 	_build_ui()
 	resized.connect(_queue_responsive_layout)
 	if get_viewport().has_signal("size_changed"):
@@ -216,6 +220,28 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		_handle_back_request()
 		get_viewport().set_input_as_handled()
+
+
+func _input(event: InputEvent) -> void:
+	if content_scroll == null or not content_scroll.visible:
+		return
+	if event is InputEventScreenTouch:
+		if event.pressed:
+			touch_scroll_dragging = false
+			touch_scroll_distance = 0.0
+		elif touch_scroll_dragging:
+			get_viewport().set_input_as_handled()
+			touch_scroll_dragging = false
+	elif event is InputEventScreenDrag:
+		var scroll_bar: VScrollBar = content_scroll.get_v_scroll_bar()
+		var max_scroll: float = maxf(0.0, scroll_bar.max_value - scroll_bar.page)
+		if max_scroll <= 0.0:
+			return
+		touch_scroll_distance += absf(event.relative.y)
+		if touch_scroll_distance >= float(content_scroll.scroll_deadzone):
+			touch_scroll_dragging = true
+			content_scroll.scroll_vertical = clampi(content_scroll.scroll_vertical - int(event.relative.y), 0, int(max_scroll))
+			get_viewport().set_input_as_handled()
 
 
 func _build_ui() -> void:
@@ -296,13 +322,13 @@ func _build_ui() -> void:
 	content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_scroll.follow_focus = true
 	content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	content_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
-	content_scroll.scroll_deadzone = 12
+	content_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	content_scroll.scroll_deadzone = 8
 	root_box.add_child(content_scroll)
 
 	content_box = VBoxContainer.new()
 	content_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	content_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_box.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	content_box.alignment = BoxContainer.ALIGNMENT_CENTER
 	content_box.add_theme_constant_override("separation", 12)
 	content_scroll.add_child(content_box)
@@ -380,6 +406,14 @@ func _build_ui() -> void:
 	mute_button.custom_minimum_size = Vector2(156, 44)
 	options_box.add_child(mute_button)
 
+	var continue_button: Button = _make_button("CONTINUAR", _resume_game)
+	continue_button.custom_minimum_size = Vector2(156, 44)
+	options_box.add_child(continue_button)
+
+	var restart_button: Button = _make_button("REINICIAR", _restart_current_game)
+	restart_button.custom_minimum_size = Vector2(156, 44)
+	options_box.add_child(restart_button)
+
 	menu_button = _make_button("MENU", _show_menu)
 	menu_button.custom_minimum_size = Vector2(156, 44)
 	options_box.add_child(menu_button)
@@ -433,11 +467,11 @@ func _show_splash() -> void:
 	safe_margin.add_child(center)
 
 	var logo: TextureRect = TextureRect.new()
-	logo.texture = _load_png_texture("res://assets/anchorlab.png")
+	logo.texture = _load_png_texture("res://assets/anchorlab_studio_splash.png")
 	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	var logo_width: float = minf(viewport_size.x * 0.78, 560.0)
-	var logo_height: float = minf(viewport_size.y * 0.34, 360.0)
+	var logo_width: float = minf(viewport_size.x * (0.84 if viewport_size.y > viewport_size.x else 0.62), 680.0)
+	var logo_height: float = minf(viewport_size.y * (0.52 if viewport_size.y > viewport_size.x else 0.68), 680.0)
 	logo.custom_minimum_size = Vector2(logo_width, logo_height)
 	center.add_child(logo)
 
@@ -483,6 +517,8 @@ func _show_menu() -> void:
 	menu_grid.add_child(_make_feature_tile("LOJA", "Avatares, banners e estilos para personalizar o jogador.", "ITENS", _show_shop, Color(0.35, 1.0, 0.72, 0.78)))
 	menu_grid.add_child(_make_feature_tile("AJUSTES", "Tema, paleta, tabuleiro, audio e preferencias.", "CONFIG", _show_settings, Color(0.86, 0.36, 1.0, 0.78)))
 	menu_grid.add_child(_make_feature_tile("SAIR", "Fechar o app.", "APP", _quit_game, Color(1.0, 0.22, 0.38, 0.72)))
+	menu_grid.add_child(_make_feature_tile("COMO JOGAR", "Regras, modos infinitos e controles.", "GUIA", _show_how_to_play, Color(0.2, 0.72, 1.0, 0.78)))
+	menu_grid.add_child(_make_feature_tile("CRÉDITOS", "MEMIQ por AnchorLab Studio.", "STUDIO", _show_credits, Color(0.52, 0.48, 1.0, 0.78)))
 	content_box.add_child(menu_grid)
 	_apply_interface_theme()
 	_apply_responsive_layout()
@@ -492,11 +528,26 @@ func _show_game_modes() -> void:
 	_show_collection_screen("MODOS DE JOGO", "Escolha como jogar", "Temporadas ranqueadas, fases sazonais e modos locais.")
 	_set_back_action(_show_menu)
 	var mode_grid: GridContainer = _make_card_grid(_responsive_columns(3))
-	mode_grid.add_child(_make_feature_tile("INFINITO", "Sequencia crescente para bater recordes e ganhar XP.", "SOLO", _start_survival, Color(0.0, 0.9, 1.0, 0.82)))
+	mode_grid.add_child(_make_feature_tile("INFINITO - SEQUÊNCIA", "Cada rodada acrescenta um novo sinal ao padrão.", "CLÁSSICO", Callable(self, "_start_survival").bind("sequence"), Color(0.0, 0.9, 1.0, 0.82)))
+	mode_grid.add_child(_make_feature_tile("INFINITO - ALEATÓRIO", "Novo padrão a cada rodada, mais longo e rápido conforme a dificuldade sobe.", "DINÂMICO", Callable(self, "_start_survival").bind("random"), Color(0.72, 0.34, 1.0, 0.82)))
 	mode_grid.add_child(_make_feature_tile("FASES", "%d desafios da temporada %s." % [PHASES_PER_SEASON, _season_label()], "SAZONAL", _show_season_phases, Color(1.0, 0.72, 0.16, 0.82)))
 	mode_grid.add_child(_make_feature_tile("MULTIPLAYER", "Rank, vitorias, derrotas e ranking competitivo.", ScoreStore.rank_name.to_upper(), _show_multiplayer, Color(0.38, 1.0, 0.62, 0.78)))
 	mode_grid.add_child(_make_feature_tile("LOCAL", "Crie ou entre em salas na mesma rede Wi-Fi.", "LAN", _show_local_multiplayer, Color(0.9, 0.38, 1.0, 0.78)))
 	content_box.add_child(mode_grid)
+	_apply_responsive_layout()
+
+
+func _show_how_to_play() -> void:
+	_show_collection_screen("COMO JOGAR", "Memória, ritmo e foco", "Observe o padrão iluminado e repita tocando as quatro áreas na mesma ordem.")
+	_set_back_action(_show_menu)
+	content_box.add_child(_make_info_card("INFINITO - SEQUÊNCIA\nO padrão anterior é preservado e recebe um novo sinal a cada rodada.\n\nINFINITO - ALEATÓRIO\nCada rodada cria um padrão novo. A sequência cresce e acelera conforme sua pontuação.\n\nCONTROLES\nToque ou clique nas cores. No Android, Voltar abre o menu da partida; pressione novamente para sair da partida."))
+	_apply_responsive_layout()
+
+
+func _show_credits() -> void:
+	_show_collection_screen("CRÉDITOS", "AnchorLab Studio apresenta", "MEMIQ é um jogo de memória desenvolvido pela AnchorLab Studio.")
+	_set_back_action(_show_menu)
+	content_box.add_child(_make_info_card("DESENVOLVIMENTO E PUBLICAÇÃO\nAnchorLab Studio\n\nVERSÃO\n1.3.1\n\nPlataformas atuais: Android e Windows."))
 	_apply_responsive_layout()
 
 
@@ -633,7 +684,20 @@ func _show_settings() -> void:
 	settings_grid.add_child(_make_feature_tile("PALETA", "Cores e atmosfera do plano de fundo.", "◈  CORES", Callable(self, "_show_settings_section").bind("palette"), Color(0.0, 0.82, 1.0, 0.82)))
 	settings_grid.add_child(_make_feature_tile("TABULEIRO", "Estilo visual das quatro áreas de jogo.", "▦  GAMEPLAY", Callable(self, "_show_settings_section").bind("board"), Color(0.36, 1.0, 0.68, 0.82)))
 	settings_grid.add_child(_make_feature_tile("ÁUDIO", "Som, efeitos e identidade sonora.", "♫  SOM", Callable(self, "_show_settings_section").bind("audio"), Color(0.86, 0.36, 1.0, 0.82)))
+	if OS.has_feature("mobile"):
+		settings_grid.add_child(_make_feature_tile("ORIENTAÇÃO", "Retrato, paisagem ou rotação automática.", "TELA", _show_orientation_settings, Color(0.28, 0.74, 1.0, 0.82)))
 	content_box.add_child(settings_grid)
+	_apply_responsive_layout()
+
+
+func _show_orientation_settings() -> void:
+	_show_collection_screen("ORIENTAÇÃO", "Como jogar no celular", "A mudança é aplicada imediatamente. No Windows o MEMIQ permanece horizontal.")
+	_set_back_action(_show_settings)
+	var orientation_grid: GridContainer = _make_card_grid(3)
+	orientation_grid.add_child(_make_button("AUTOMÁTICA" + ("  // ATIVA" if mobile_orientation == "sensor" else ""), Callable(self, "_set_mobile_orientation").bind("sensor")))
+	orientation_grid.add_child(_make_button("RETRATO" + ("  // ATIVA" if mobile_orientation == "portrait" else ""), Callable(self, "_set_mobile_orientation").bind("portrait")))
+	orientation_grid.add_child(_make_button("PAISAGEM" + ("  // ATIVA" if mobile_orientation == "landscape" else ""), Callable(self, "_set_mobile_orientation").bind("landscape")))
+	content_box.add_child(orientation_grid)
 	_apply_responsive_layout()
 
 
@@ -674,7 +738,7 @@ func _show_settings_section(section: String) -> void:
 			var label: String = String(sound["name"])
 			if ScoreStore.selected_sound_theme == String(sound["id"]):
 				label += "  // ATIVO"
-				audio_grid.add_child(_make_button(label, Callable(self, "_set_sound_theme").bind(String(sound["id"]))))
+			audio_grid.add_child(_make_button(label, Callable(self, "_set_sound_theme").bind(String(sound["id"]))))
 		content_box.add_child(audio_grid)
 		content_box.add_child(_make_section_label("♫  MÚSICA DE FUNDO"))
 		var music_grid: GridContainer = _make_card_grid(2)
@@ -811,16 +875,17 @@ func _show_collection_screen(screen_title: String, screen_subtitle: String, deta
 	title_label.text = screen_title
 	subtitle_label.text = screen_subtitle
 	status_label.text = detail
-	content_scroll.scroll_vertical = 0
+	_reset_scroll_position()
+	call_deferred("_reset_scroll_position")
 	content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_box.alignment = BoxContainer.ALIGNMENT_BEGIN
 	_apply_interface_theme()
 
 
-func _start_survival() -> void:
+func _start_survival(infinite_type: String = "sequence") -> void:
 	session_id += 1
 	screen_state = "game"
-	gameplay_mode = "survival"
+	gameplay_mode = "survival_random" if infinite_type == "random" else "survival_sequence"
 	var current_session: int = session_id
 	_clear_boxes()
 	_set_back_target("menu")
@@ -895,24 +960,26 @@ func _next_round(current_session: int) -> void:
 	accepting_input = false
 	board.enabled = false
 	input_index = 0
-	var previous_sequence: Array[int] = sequence.duplicate()
-	sequence.clear()
-	var sequence_length: int = score + 1
-	for i in range(sequence_length):
-		var next_color: int = rng.randi_range(0, 3)
-		if sequence.size() >= 2 and sequence[-1] == sequence[-2]:
-			while next_color == sequence[-1]:
-				next_color = rng.randi_range(0, 3)
-		sequence.append(next_color)
-	# Cada rodada é uma nova sequência aleatória, não a rodada anterior com um
-	# item anexado. Em uma coincidência completa, troca o último sinal.
-	if sequence.size() > 1 and sequence == previous_sequence:
-		var replacement: int = rng.randi_range(0, 3)
-		while replacement == sequence[-1]:
-			replacement = rng.randi_range(0, 3)
-		sequence[-1] = replacement
+	if gameplay_mode == "survival_sequence":
+		sequence.append(_next_sequence_color(sequence))
+	else:
+		var previous_sequence: Array[int] = sequence.duplicate()
+		sequence.clear()
+		var sequence_length: int = score + 1 + (int(score / 5) if gameplay_mode == "survival_random" else 0)
+		for i in range(sequence_length):
+			sequence.append(_next_sequence_color(sequence))
+		if sequence.size() > 1 and sequence == previous_sequence:
+			sequence[-1] = (sequence[-1] + rng.randi_range(1, 3)) % 4
 	_update_score_label()
 	await _play_current_sequence(current_session)
+
+
+func _next_sequence_color(current_sequence: Array[int]) -> int:
+	var next_color: int = rng.randi_range(0, 3)
+	if current_sequence.size() >= 2 and current_sequence[-1] == current_sequence[-2]:
+		while next_color == current_sequence[-1]:
+			next_color = rng.randi_range(0, 3)
+	return next_color
 
 
 func _play_current_sequence(current_session: int) -> void:
@@ -999,7 +1066,7 @@ func _finish_game() -> void:
 
 	var new_record: bool = false
 	var phase_reward_text: String = ""
-	if gameplay_mode == "survival":
+	if gameplay_mode.begins_with("survival"):
 		new_record = ScoreStore.record_survival(score)
 		_check_achievements()
 	else:
@@ -1035,8 +1102,8 @@ func _finish_game() -> void:
 		if phase_reward_text != "":
 			phase_result += "\nRECOMPENSA  •  %s" % phase_reward_text
 		content_box.add_child(_make_info_card(phase_result))
-	if gameplay_mode == "survival":
-		content_box.add_child(_make_button("JOGAR NOVAMENTE", _start_survival))
+	if gameplay_mode.begins_with("survival"):
+		content_box.add_child(_make_button("JOGAR NOVAMENTE", Callable(self, "_start_survival").bind("random" if gameplay_mode == "survival_random" else "sequence")))
 	else:
 		content_box.add_child(_make_button("REPETIR FASE", Callable(self, "_start_phase").bind(current_phase)))
 		content_box.add_child(_make_button("VOLTAR PARA FASES", _show_season_phases))
@@ -1152,9 +1219,16 @@ func _update_score_label() -> void:
 
 func _clear_boxes() -> void:
 	for child in content_box.get_children():
+		content_box.remove_child(child)
 		child.queue_free()
 	for child in action_row.get_children():
+		action_row.remove_child(child)
 		child.queue_free()
+
+
+func _reset_scroll_position() -> void:
+	if content_scroll != null:
+		content_scroll.scroll_vertical = 0
 
 
 func _make_button_grid(columns: int = 2) -> GridContainer:
@@ -1394,6 +1468,40 @@ func _bar_style(fill: Color, border: Color) -> StyleBoxFlat:
 	return style
 
 
+func _configure_platform_window() -> void:
+	if OS.has_feature("mobile"):
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		DisplayServer.window_set_size(Vector2i(1280, 720))
+		var screen_size: Vector2i = DisplayServer.screen_get_size()
+		DisplayServer.window_set_position((screen_size - Vector2i(1280, 720)) / 2)
+
+
+func _set_mobile_orientation(value: String) -> void:
+	if not OS.has_feature("mobile"):
+		return
+	mobile_orientation = value
+	if value == "portrait":
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
+	elif value == "landscape":
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
+	else:
+		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
+	_show_orientation_settings()
+
+
+func _resume_game() -> void:
+	in_game_options.visible = false
+
+
+func _restart_current_game() -> void:
+	if gameplay_mode == "phase":
+		_start_phase(current_phase)
+	else:
+		_start_survival("random" if gameplay_mode == "survival_random" else "sequence")
+
+
 func _set_back_target(target: String) -> void:
 	current_back_target = target
 	if back_button != null:
@@ -1414,10 +1522,7 @@ func _handle_back_request() -> void:
 		if in_game_options != null and not in_game_options.visible:
 			in_game_options.visible = true
 		else:
-			if gameplay_mode == "phase":
-				_show_season_phases()
-			else:
-				_show_game_modes()
+			in_game_options.visible = false
 		return
 
 	if screen_state == "collection" or screen_state == "game_over":

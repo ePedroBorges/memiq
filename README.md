@@ -21,6 +21,8 @@ Jogo da memoria estilo Genius feito em Godot para Android.
 - Menus com fundo neon animado, botoes luminosos e listas rolaveis.
 - Layout responsivo para celular e desktop, com escala dinamica de tabuleiro, botoes e fontes.
 - Android com retrato, paisagem ou rotacao automatica; Windows abre em janela horizontal 1280x720.
+- A orientacao escolhida em `AJUSTES > ORIENTACAO` fica salva no aparelho e e reaplicada ao abrir o jogo.
+- O layout em retrato usa uma coluna, controles e tabuleiro maiores; ao girar para paisagem as grades voltam a usar varias colunas.
 - Botao/gesto Voltar do Android navega pelas telas e abre o menu durante a partida.
 - Logo `MEMIQ` e opcoes mais centralizados na tela inicial.
 - Fundos e estilos visuais mudam conforme recompensas desbloqueadas.
@@ -35,6 +37,14 @@ build/memiq.apk
 ```
 
 O preset Windows gera `build/memiq-windows.exe`.
+
+## Conta e multiplayer
+
+- Cadastro e login usam Supabase Auth com confirmacao de email.
+- `ESQUECI A SENHA` solicita o email de recuperacao pelo Supabase.
+- Para publicar, configure SMTP proprio em `Authentication > Email` no painel do Supabase. O SMTP padrao e limitado e nao e adequado para usuarios finais.
+- O multiplayer LAN permite criar ou entrar em uma sala por IP na mesma rede Wi-Fi. O anfitriao inicia o duelo; os dois jogadores recebem a mesma sequencia e o resultado atualiza ranking e historico.
+- No Windows, o firewall pode pedir permissao na primeira sala criada. No Android, as permissoes de internet e estado da rede ja estao habilitadas no preset.
 
 Para gerar pelo editor:
 

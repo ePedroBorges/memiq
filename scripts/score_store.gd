@@ -19,6 +19,7 @@ var selected_sound_theme: String = "sound_classic"
 var selected_music_theme: String = "music_neon_night"
 var audio_muted: bool = false
 var visual_theme: String = "dark"
+var display_orientation: String = "sensor"
 var display_name: String = "Jogador MEMIQ"
 var avatar_id: String = "avatar_neon"
 var banner_id: String = "banner_grid"
@@ -60,6 +61,9 @@ func load_scores() -> void:
 	selected_music_theme = String(config.get_value("settings", "selected_music_theme", "music_neon_night"))
 	audio_muted = bool(config.get_value("settings", "audio_muted", false))
 	visual_theme = String(config.get_value("settings", "visual_theme", "dark"))
+	display_orientation = String(config.get_value("settings", "display_orientation", "sensor"))
+	if display_orientation not in ["sensor", "portrait", "landscape"]:
+		display_orientation = "sensor"
 	display_name = String(config.get_value("profile", "display_name", "Jogador MEMIQ"))
 	avatar_id = String(config.get_value("profile", "avatar_id", "avatar_neon"))
 	banner_id = String(config.get_value("profile", "banner_id", "banner_grid"))
@@ -112,6 +116,7 @@ func save_scores() -> void:
 	config.set_value("settings", "selected_music_theme", selected_music_theme)
 	config.set_value("settings", "audio_muted", audio_muted)
 	config.set_value("settings", "visual_theme", visual_theme)
+	config.set_value("settings", "display_orientation", display_orientation)
 	config.set_value("profile", "display_name", display_name)
 	config.set_value("profile", "avatar_id", avatar_id)
 	config.set_value("profile", "banner_id", banner_id)
@@ -140,6 +145,15 @@ func save_scores() -> void:
 
 	config.save(SAVE_PATH)
 	data_changed.emit()
+
+
+func set_display_orientation(value: String) -> void:
+	if value not in ["sensor", "portrait", "landscape"]:
+		return
+	if display_orientation == value:
+		return
+	display_orientation = value
+	save_scores()
 
 
 func record_survival(score: int) -> bool:

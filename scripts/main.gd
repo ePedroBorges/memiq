@@ -199,8 +199,13 @@ var splash_root: Control
 
 func _ready() -> void:
 	rng.randomize()
+	mobile_orientation = ScoreStore.display_orientation
 	_configure_platform_window()
 	_build_ui()
+	MultiplayerManager.status_changed.connect(_on_network_status_changed)
+	MultiplayerManager.lobby_changed.connect(_on_network_lobby_changed)
+	MultiplayerManager.duel_started.connect(_start_network_duel)
+	MultiplayerManager.duel_finished.connect(_on_network_duel_finished)
 	resized.connect(_queue_responsive_layout)
 	if get_viewport().has_signal("size_changed"):
 		get_viewport().connect("size_changed", Callable(self, "_queue_responsive_layout"))
@@ -511,28 +516,27 @@ func _show_menu() -> void:
 	status_label.visible = false
 	content_box.alignment = BoxContainer.ALIGNMENT_CENTER
 
-	var menu_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	var menu_grid: GridContainer = _make_card_grid(3)
 	menu_grid.add_child(_make_feature_tile("JOGAR", "Modos, fases sazonais, infinito e partidas locais.", "MODOS", _show_game_modes, Color(0.0, 0.78, 1.0, 0.78)))
 	menu_grid.add_child(_make_feature_tile("PERFIL", "Conta, visual, conquistas, recompensas e historico.", "PROGRESSO", _show_profile, Color(1.0, 0.54, 0.14, 0.82)))
 	menu_grid.add_child(_make_feature_tile("LOJA", "Avatares, banners e estilos para personalizar o jogador.", "ITENS", _show_shop, Color(0.35, 1.0, 0.72, 0.78)))
 	menu_grid.add_child(_make_feature_tile("AJUSTES", "Tema, paleta, tabuleiro, audio e preferencias.", "CONFIG", _show_settings, Color(0.86, 0.36, 1.0, 0.78)))
-	menu_grid.add_child(_make_feature_tile("SAIR", "Fechar o app.", "APP", _quit_game, Color(1.0, 0.22, 0.38, 0.72)))
 	menu_grid.add_child(_make_feature_tile("COMO JOGAR", "Regras, modos infinitos e controles.", "GUIA", _show_how_to_play, Color(0.2, 0.72, 1.0, 0.78)))
 	menu_grid.add_child(_make_feature_tile("CRÉDITOS", "MEMIQ por AnchorLab Studio.", "STUDIO", _show_credits, Color(0.52, 0.48, 1.0, 0.78)))
+	menu_grid.add_child(_make_feature_tile("SAIR", "Fechar o app.", "APP", _quit_game, Color(1.0, 0.22, 0.38, 0.72)))
 	content_box.add_child(menu_grid)
 	_apply_interface_theme()
 	_apply_responsive_layout()
 
 
 func _show_game_modes() -> void:
-	_show_collection_screen("MODOS DE JOGO", "Escolha como jogar", "Temporadas ranqueadas, fases sazonais e modos locais.")
+	_show_collection_screen("MODOS DE JOGO", "Escolha como jogar", "Modos infinitos, fases sazonais e multiplayer LAN.")
 	_set_back_action(_show_menu)
-	var mode_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	var mode_grid: GridContainer = _make_card_grid(3)
 	mode_grid.add_child(_make_feature_tile("INFINITO - SEQUÊNCIA", "Cada rodada acrescenta um novo sinal ao padrão.", "CLÁSSICO", Callable(self, "_start_survival").bind("sequence"), Color(0.0, 0.9, 1.0, 0.82)))
 	mode_grid.add_child(_make_feature_tile("INFINITO - ALEATÓRIO", "Novo padrão a cada rodada, mais longo e rápido conforme a dificuldade sobe.", "DINÂMICO", Callable(self, "_start_survival").bind("random"), Color(0.72, 0.34, 1.0, 0.82)))
 	mode_grid.add_child(_make_feature_tile("FASES", "%d desafios da temporada %s." % [PHASES_PER_SEASON, _season_label()], "SAZONAL", _show_season_phases, Color(1.0, 0.72, 0.16, 0.82)))
-	mode_grid.add_child(_make_feature_tile("MULTIPLAYER", "Rank, vitorias, derrotas e ranking competitivo.", ScoreStore.rank_name.to_upper(), _show_multiplayer, Color(0.38, 1.0, 0.62, 0.78)))
-	mode_grid.add_child(_make_feature_tile("LOCAL", "Crie ou entre em salas na mesma rede Wi-Fi.", "LAN", _show_local_multiplayer, Color(0.9, 0.38, 1.0, 0.78)))
+	mode_grid.add_child(_make_feature_tile("MULTIPLAYER", "Duelo LAN, patente e ranking competitivo.", "LAN  •  %s" % ScoreStore.rank_name.to_upper(), _show_multiplayer, Color(0.38, 1.0, 0.62, 0.78)))
 	content_box.add_child(mode_grid)
 	_apply_responsive_layout()
 
@@ -547,18 +551,29 @@ func _show_how_to_play() -> void:
 func _show_credits() -> void:
 	_show_collection_screen("CRÉDITOS", "AnchorLab Studio apresenta", "MEMIQ é um jogo de memória desenvolvido pela AnchorLab Studio.")
 	_set_back_action(_show_menu)
-	content_box.add_child(_make_info_card("DESENVOLVIMENTO E PUBLICAÇÃO\nAnchorLab Studio\n\nVERSÃO\n1.3.1\n\nPlataformas atuais: Android e Windows."))
+	content_box.add_child(_make_info_card("DESENVOLVIMENTO E PUBLICAÇÃO\nAnchorLab Studio\n\nVERSÃO\n1.4.0\n\nPlataformas atuais: Android e Windows."))
 	_apply_responsive_layout()
 
 
 func _show_local_multiplayer() -> void:
-	_show_collection_screen("MULTIPLAYER LOCAL", "Rede Wi-Fi local", "Preparado para partidas em LAN. O salvamento de historico usa a conta conectada.")
-	_set_back_action(_show_game_modes)
-	content_box.add_child(_make_section_label("STATUS"))
-	content_box.add_child(_make_info_card("Crie ou entre em uma sala na mesma rede Wi-Fi. A camada online esta separada para receber o protocolo de host/cliente sem mexer no progresso."))
-	var lobby_grid: GridContainer = _make_card_grid(_responsive_columns(2))
-	lobby_grid.add_child(_make_feature_tile("CRIAR SALA", "Hospedar uma partida local nesta rede.", "HOST", Callable(self, "_show_unavailable_notice").bind("Host local preparado para proxima etapa de rede."), Color(0.0, 0.78, 1.0, 0.78)))
-	lobby_grid.add_child(_make_feature_tile("ENTRAR", "Conectar por codigo ou IP quando a etapa de rede for ligada.", "CLIENTE", Callable(self, "_show_unavailable_notice").bind("Entrada por IP/codigo preparada para proxima etapa de rede."), Color(0.36, 1.0, 0.72, 0.78)))
+	_show_collection_screen("MULTIPLAYER LOCAL", "Rede Wi-Fi local", MultiplayerManager.last_status)
+	_set_back_action(_show_multiplayer)
+	content_box.add_child(_make_info_card("Os dois aparelhos devem estar na mesma rede Wi-Fi. Quem cria a sala informa seu IP local ao outro jogador; ambos recebem a mesma sequencia e o resultado atualiza o ranking."))
+	if MultiplayerManager.has_active_peer():
+		content_box.add_child(_make_info_card("%s\nJogadores conectados: %d/2" % [MultiplayerManager.last_status, MultiplayerManager.connected_player_count()]))
+		if MultiplayerManager.hosting:
+			var start_button: Button = _make_button("INICIAR DUELO", _start_network_duel_from_lobby)
+			start_button.disabled = MultiplayerManager.connected_player_count() < 2
+			content_box.add_child(start_button)
+		else:
+			content_box.add_child(_make_info_card("Aguarde o anfitriao iniciar o duelo."))
+		content_box.add_child(_make_button("FECHAR SALA", _close_network_room))
+		_apply_responsive_layout()
+		return
+	content_box.add_child(_make_info_card("Seu IP local: %s\nPorta padrao: %d" % [_preferred_local_ip(), MultiplayerManager.DEFAULT_PORT]))
+	var lobby_grid: GridContainer = _make_card_grid(2)
+	lobby_grid.add_child(_make_feature_tile("CRIAR SALA", "Hospedar uma partida neste aparelho.", "HOST", _host_network_room, Color(0.0, 0.78, 1.0, 0.78)))
+	lobby_grid.add_child(_make_feature_tile("ENTRAR", "Conectar ao IP do anfitriao.", "CLIENTE", _show_join_network_form, Color(0.36, 1.0, 0.72, 0.78)))
 	content_box.add_child(lobby_grid)
 	_apply_responsive_layout()
 
@@ -567,8 +582,8 @@ func _show_multiplayer() -> void:
 	_show_collection_screen("MULTIPLAYER", "Temporada atual: %s" % _season_label(), "Rank por vitorias e derrotas. Bronze/Prata perdem pontos depois de 2 derrotas seguidas; Ouro+ perde na primeira derrota.")
 	_set_back_action(_show_game_modes)
 	content_box.add_child(_make_info_card("Patente: %s\nPontuacao: %d\nVitorias: %d  Derrotas: %d\nSequencia de derrotas: %d" % [ScoreStore.rank_name, ScoreStore.multiplayer_rating, ScoreStore.multiplayer_wins, ScoreStore.multiplayer_losses, ScoreStore.multiplayer_loss_streak]))
-	var multiplayer_grid: GridContainer = _make_card_grid(_responsive_columns(3))
-	multiplayer_grid.add_child(_make_feature_tile("BUSCAR PARTIDA", "Matchmaking online preparado para a proxima etapa.", "ONLINE", Callable(self, "_show_unavailable_notice").bind("Matchmaking online preparado para integrar com Supabase Realtime/servidor de partidas."), Color(0.0, 0.78, 1.0, 0.78)))
+	var multiplayer_grid: GridContainer = _make_card_grid(3)
+	multiplayer_grid.add_child(_make_feature_tile("JOGAR EM REDE", "Duelo entre dois aparelhos na mesma rede Wi-Fi.", "LAN", _show_local_multiplayer, Color(0.0, 0.78, 1.0, 0.78)))
 	multiplayer_grid.add_child(_make_feature_tile("RANKING", "Ver melhores jogadores por pontuacao.", "TOP", _show_leaderboard, Color(1.0, 0.72, 0.18, 0.82)))
 	content_box.add_child(multiplayer_grid)
 	_apply_responsive_layout()
@@ -580,7 +595,7 @@ func _show_season_phases() -> void:
 	_set_back_action(_show_game_modes)
 	for section_index in range(PHASE_SECTION_LABELS.size()):
 		content_box.add_child(_make_section_label("%s %d" % [PHASE_SECTION_LABELS[section_index], section_index + 1]))
-		var phase_grid: GridContainer = _make_card_grid(_responsive_columns(5))
+		var phase_grid: GridContainer = _make_card_grid(5)
 		for phase in range(section_index * PHASES_PER_SECTION + 1, (section_index + 1) * PHASES_PER_SECTION + 1):
 			phase_grid.add_child(_make_phase_tile(phase, ScoreStore.season_phase_completed(season_key, phase)))
 		content_box.add_child(phase_grid)
@@ -593,18 +608,18 @@ func _show_profile() -> void:
 	_set_back_action(_show_menu)
 	content_box.add_child(_make_info_card("%s\nNÍVEL %d  •  %d/%d XP  •  RECORDE %d\n%d PARTIDAS  •  %d FASES  •  %d OURO  •  %d DIAMANTES\nVisual ativo: %s  •  %s" % [ScoreStore.display_name, ScoreStore.survival_level, ScoreStore.survival_xp, ScoreStore.xp_to_next_survival_level(), ScoreStore.best_survival, ScoreStore.games_played, ScoreStore.completed_phase_count(), ScoreStore.gold, ScoreStore.diamonds, ScoreStore.avatar_id.replace("avatar_", "").capitalize(), ScoreStore.banner_id.replace("banner_", "").capitalize()]))
 	content_box.add_child(_make_section_label("●  CONTA E IDENTIDADE"))
-	var identity_grid: GridContainer = _make_card_grid(_responsive_columns(2))
+	var identity_grid: GridContainer = _make_card_grid(2)
 	identity_grid.add_child(_make_feature_tile("CONTA", "Login, nuvem e sincronização de progresso.", SupabaseClient.auth_label().to_upper(), _show_account, Color(0.0, 0.78, 1.0, 0.78)))
 	identity_grid.add_child(_make_feature_tile("EDITAR PERFIL", "Nome, avatar, banner e estilo.", "VISUAL", _show_profile_editor, Color(1.0, 0.58, 0.14, 0.82)))
 	content_box.add_child(identity_grid)
 	content_box.add_child(_make_section_label("★  PROGRESSO E COLEÇÃO"))
-	var progress_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	var progress_grid: GridContainer = _make_card_grid(3)
 	progress_grid.add_child(_make_feature_tile("CUSTOMIZAÇÃO", "Fundos e tabuleiros liberados.", "JOGO", _show_customization, Color(0.86, 0.36, 1.0, 0.78)))
 	progress_grid.add_child(_make_feature_tile("CONQUISTAS", "Metas permanentes e bônus.", "%d/%d" % [_achievement_count(), ACHIEVEMENTS.size()], _show_achievements, Color(1.0, 0.78, 0.2, 0.82)))
 	progress_grid.add_child(_make_feature_tile("RECOMPENSAS", "Itens conquistados por nível.", "%d/%d" % [ScoreStore.unlocked_reward_count(), REWARDS.size()], _show_rewards, Color(0.32, 1.0, 0.72, 0.78)))
 	content_box.add_child(progress_grid)
 	content_box.add_child(_make_section_label("◎  SOCIAL E ATIVIDADE"))
-	var social_grid: GridContainer = _make_card_grid(_responsive_columns(2))
+	var social_grid: GridContainer = _make_card_grid(2)
 	social_grid.add_child(_make_feature_tile("AMIGOS", "Convites e partidas sociais.", "SOCIAL", _show_friends, Color(0.5, 0.72, 1.0, 0.78)))
 	social_grid.add_child(_make_feature_tile("HISTÓRICO", "Partidas locais e na nuvem.", "PARTIDAS", _show_match_history, Color(1.0, 0.36, 0.52, 0.72)))
 	content_box.add_child(social_grid)
@@ -640,7 +655,7 @@ func _show_shop_category(kind: String) -> void:
 func _show_achievements() -> void:
 	_show_collection_screen("CONQUISTAS", "%d/%d desbloqueadas" % [_achievement_count(), ACHIEVEMENTS.size()], "Objetivos permanentes para dominar o Infinito.")
 	_set_back_action(_show_profile)
-	var achievement_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	var achievement_grid: GridContainer = _make_card_grid(3)
 	for achievement in ACHIEVEMENTS:
 		achievement_grid.add_child(_make_achievement_card(achievement))
 	content_box.add_child(achievement_grid)
@@ -650,7 +665,7 @@ func _show_achievements() -> void:
 func _show_rewards() -> void:
 	_show_collection_screen("RECOMPENSAS", "%d/%d liberadas" % [ScoreStore.unlocked_reward_count(), REWARDS.size()], "Itens ganhados ao subir de nivel.")
 	_set_back_action(_show_profile)
-	var reward_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	var reward_grid: GridContainer = _make_card_grid(3)
 	for reward in REWARDS:
 		reward_grid.add_child(_make_reward_card(reward, false))
 	content_box.add_child(reward_grid)
@@ -661,13 +676,13 @@ func _show_customization() -> void:
 	_show_collection_screen("CUSTOMIZACAO", "Fundo e estilo do Genius", "Escolha os itens ja liberados.")
 	_set_back_action(_show_profile)
 	content_box.add_child(_make_section_label("▣  FUNDOS"))
-	var background_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	var background_grid: GridContainer = _make_card_grid(3)
 	for reward in REWARDS:
 		if String(reward["kind"]) == "background":
 			background_grid.add_child(_make_reward_card(reward, true))
 	content_box.add_child(background_grid)
 	content_box.add_child(_make_section_label("◉  TABULEIROS GENIUS"))
-	var board_grid: GridContainer = _make_card_grid(_responsive_columns(3))
+	var board_grid: GridContainer = _make_card_grid(3)
 	for reward in REWARDS:
 		if String(reward["kind"]) == "board":
 			board_grid.add_child(_make_reward_card(reward, true))
@@ -765,6 +780,8 @@ func _show_account() -> void:
 		return
 	if SupabaseClient.last_error != "":
 		content_box.add_child(_make_info_card(SupabaseClient.user_facing_error()))
+	elif SupabaseClient.auth_notice != "":
+		content_box.add_child(_make_info_card(SupabaseClient.auth_notice))
 	if SupabaseClient.is_signed_in():
 		content_box.add_child(_make_info_card("Progresso protegido na nuvem. A sincronização acontece automaticamente enquanto você joga."))
 		content_box.add_child(_make_button("SINCRONIZAR AGORA", _sync_cloud_now))
@@ -774,7 +791,10 @@ func _show_account() -> void:
 	var account_grid: GridContainer = _make_card_grid(2)
 	account_grid.add_child(_make_feature_tile("ENTRAR", "Acesse uma conta já existente.", "●  CONTA", _show_login_form, Color(0.0, 0.82, 1.0, 0.82)))
 	account_grid.add_child(_make_feature_tile("CRIAR CONTA", "Proteja seu progresso com email e senha.", "+  NOVO JOGADOR", _show_signup_form, Color(0.34, 1.0, 0.68, 0.82)))
+	account_grid.add_child(_make_feature_tile("ESQUECI A SENHA", "Receba um email para redefinir sua senha.", "EMAIL", _show_forgot_password_form, Color(1.0, 0.62, 0.2, 0.82)))
 	content_box.add_child(account_grid)
+	if SupabaseClient.user_email != "":
+		content_box.add_child(_make_button("REENVIAR CONFIRMACAO", Callable(self, "_resend_confirmation").bind(SupabaseClient.user_email)))
 	_apply_responsive_layout()
 
 
@@ -801,6 +821,19 @@ func _show_login_form() -> void:
 	var login_password_input: LineEdit = _make_text_input("senha", true)
 	content_box.add_child(login_password_input)
 	content_box.add_child(_make_button("ENTRAR COM EMAIL", Callable(self, "_login_from_fields").bind(login_email_input, login_password_input)))
+	content_box.add_child(_make_button("ESQUECI A SENHA", _show_forgot_password_form))
+	_apply_responsive_layout()
+
+
+func _show_forgot_password_form() -> void:
+	_show_collection_screen("RECUPERAR SENHA", "Redefinicao por email", "Informe o email da conta. Por seguranca, o app nao confirma se o endereco esta cadastrado.")
+	_set_back_action(_show_account)
+	var recovery_email_input: LineEdit = _make_text_input("email")
+	if SupabaseClient.user_email != "":
+		recovery_email_input.text = SupabaseClient.user_email
+	content_box.add_child(recovery_email_input)
+	content_box.add_child(_make_button("ENVIAR EMAIL DE RECUPERACAO", Callable(self, "_request_password_reset").bind(recovery_email_input)))
+	content_box.add_child(_make_info_card("Para producao, configure um servidor SMTP proprio no painel do Supabase. O servico de email padrao tem limites e pode bloquear destinatarios externos."))
 	_apply_responsive_layout()
 
 
@@ -915,6 +948,39 @@ func _start_survival(infinite_type: String = "sequence") -> void:
 		_next_round(current_session)
 
 
+func _start_network_duel(seed_value: int) -> void:
+	session_id += 1
+	screen_state = "game"
+	gameplay_mode = "multiplayer"
+	var current_session: int = session_id
+	_clear_boxes()
+	_set_back_target("menu")
+	_set_game_chrome(true)
+	_set_menu_logo_visible(false)
+	top_bar.visible = false
+	content_scroll.visible = false
+	action_row.visible = false
+	board.visible = true
+	title_label.visible = false
+	subtitle_label.visible = false
+	score_label.visible = false
+	status_label.visible = false
+	sequence.clear()
+	score = 0
+	input_index = 0
+	rng.seed = seed_value
+	flash_time = _flash_time_for_level()
+	accepting_input = false
+	root_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_apply_unlocked_visuals()
+	_update_score_label()
+	_update_hud()
+	_apply_responsive_layout()
+	await get_tree().create_timer(0.65).timeout
+	if current_session == session_id:
+		_next_round(current_session)
+
+
 func _start_phase(phase_number: int) -> void:
 	if ScoreStore.season_phase_completed(_season_key(), phase_number):
 		_show_season_phases()
@@ -960,7 +1026,7 @@ func _next_round(current_session: int) -> void:
 	accepting_input = false
 	board.enabled = false
 	input_index = 0
-	if gameplay_mode == "survival_sequence":
+	if gameplay_mode in ["survival_sequence", "multiplayer"]:
 		sequence.append(_next_sequence_color(sequence))
 	else:
 		var previous_sequence: Array[int] = sequence.duplicate()
@@ -1035,12 +1101,13 @@ func _on_pad_pressed(index: int) -> void:
 	if input_index >= sequence.size():
 		score += 1
 		_show_success_feedback()
-		var previous_level: int = ScoreStore.survival_level
-		ScoreStore.add_survival_xp(_xp_for_score(score))
-		flash_time = _flash_time_for_level()
-		var reward_names: Array[String] = _unlock_due_rewards()
-		_check_achievements()
-		_show_reward_notice(reward_names, previous_level)
+		if gameplay_mode != "multiplayer":
+			var previous_level: int = ScoreStore.survival_level
+			ScoreStore.add_survival_xp(_xp_for_score(score))
+			flash_time = _flash_time_for_level()
+			var reward_names: Array[String] = _unlock_due_rewards()
+			_check_achievements()
+			_show_reward_notice(reward_names, previous_level)
 		await get_tree().create_timer(0.42).timeout
 		if current_session == session_id and gameplay_mode == "phase" and score >= current_phase_goal:
 			_finish_game()
@@ -1054,6 +1121,9 @@ func _on_pad_pressed(index: int) -> void:
 
 
 func _finish_game() -> void:
+	if gameplay_mode == "multiplayer":
+		_finish_network_duel()
+		return
 	session_id += 1
 	screen_state = "game_over"
 	accepting_input = false
@@ -1114,6 +1184,47 @@ func _finish_game() -> void:
 	_apply_responsive_layout()
 
 
+func _finish_network_duel() -> void:
+	session_id += 1
+	screen_state = "game_over"
+	accepting_input = false
+	board.enabled = false
+	_clear_boxes()
+	_set_back_target("menu")
+	_set_game_chrome(false)
+	board.visible = false
+	root_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	top_bar.visible = false
+	content_scroll.visible = true
+	title_label.visible = false
+	subtitle_label.visible = false
+	status_label.visible = false
+	content_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	content_box.add_child(_make_label("RESULTADO ENVIADO", 30, Color(0.96, 0.99, 1.0)))
+	content_box.add_child(_make_info_card("Sua pontuacao: %d\nAguardando o outro jogador terminar..." % score))
+	MultiplayerManager.submit_duel_score(score)
+	_apply_responsive_layout()
+
+
+func _on_network_duel_finished(own_score: int, opponent_score: int, won: bool, draw: bool) -> void:
+	screen_state = "game_over"
+	_clear_boxes()
+	_set_game_chrome(false)
+	board.visible = false
+	content_scroll.visible = true
+	content_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	var result_title: String = "EMPATE" if draw else ("VITORIA" if won else "DERROTA")
+	content_box.add_child(_make_label(result_title, 34, Color(0.36, 1.0, 0.72) if won else Color(1.0, 0.72, 0.2)))
+	content_box.add_child(_make_info_card("Voce: %d\nAdversario: %d" % [own_score, opponent_score]))
+	if not draw:
+		var delta: int = ScoreStore.record_multiplayer_result(won)
+		content_box.add_child(_make_info_card("Ranking: %+d pontos\nPatente atual: %s" % [delta, ScoreStore.rank_name]))
+		await SupabaseClient.record_match("multiplayer_lan", "", won, own_score, opponent_score)
+	content_box.add_child(_make_button("NOVA PARTIDA", _show_local_multiplayer))
+	content_box.add_child(_make_button("MENU", _show_menu))
+	_apply_responsive_layout()
+
+
 func _create_account_from_fields(name_input: LineEdit, email_input: LineEdit, password_input: LineEdit, password_confirm_input: LineEdit) -> void:
 	var name: String = name_input.text.strip_edges()
 	var email: String = email_input.text.strip_edges()
@@ -1131,10 +1242,13 @@ func _create_account_from_fields(name_input: LineEdit, email_input: LineEdit, pa
 	if password != password_confirm:
 		status_label.text = "As senhas nao conferem."
 		return
-	await SupabaseClient.sign_up(name, email, password)
+	var ok: bool = await SupabaseClient.sign_up(name, email, password)
 	_apply_owner_access()
 	_show_account()
-	status_label.text = SupabaseClient.last_error if SupabaseClient.last_error != "" else "Verifique seu email para confirmar a conta."
+	if ok:
+		status_label.text = SupabaseClient.auth_notice if SupabaseClient.auth_notice != "" else "Conta criada e conectada."
+	else:
+		status_label.text = SupabaseClient.user_facing_error()
 
 
 func _login_from_fields(email_input: LineEdit, password_input: LineEdit) -> void:
@@ -1150,6 +1264,18 @@ func _login_from_fields(email_input: LineEdit, password_input: LineEdit) -> void
 	_show_account()
 	if not ok and message != "":
 		status_label.text = message
+
+
+func _request_password_reset(email_input: LineEdit) -> void:
+	var ok: bool = await SupabaseClient.request_password_reset(email_input.text)
+	_show_account()
+	status_label.text = SupabaseClient.auth_notice if ok else SupabaseClient.user_facing_error()
+
+
+func _resend_confirmation(email: String) -> void:
+	var ok: bool = await SupabaseClient.resend_signup_confirmation(email)
+	_show_account()
+	status_label.text = SupabaseClient.auth_notice if ok else SupabaseClient.user_facing_error()
 
 
 func _apply_owner_access() -> void:
@@ -1213,6 +1339,60 @@ func _show_unavailable_notice(message: String) -> void:
 	status_label.text = message
 
 
+func _preferred_local_ip() -> String:
+	for address in IP.get_local_addresses():
+		var value: String = String(address)
+		if value.begins_with("192.168.") or value.begins_with("10.") or value.begins_with("172."):
+			return value
+	return "verifique nas configuracoes da rede"
+
+
+func _host_network_room() -> void:
+	MultiplayerManager.host_room()
+	_show_local_multiplayer()
+
+
+func _show_join_network_form() -> void:
+	_show_collection_screen("ENTRAR NA SALA", "Conectar por IP", "Digite o IP exibido no aparelho que criou a sala.")
+	_set_back_action(_show_local_multiplayer)
+	var address_input: LineEdit = _make_text_input("IP do anfitriao, ex.: 192.168.0.10")
+	content_box.add_child(address_input)
+	var port_input: LineEdit = _make_text_input("porta")
+	port_input.text = str(MultiplayerManager.DEFAULT_PORT)
+	content_box.add_child(port_input)
+	content_box.add_child(_make_button("CONECTAR", Callable(self, "_join_network_room").bind(address_input, port_input)))
+	_apply_responsive_layout()
+
+
+func _join_network_room(address_input: LineEdit, port_input: LineEdit) -> void:
+	var port: int = int(port_input.text)
+	if port <= 0 or port > 65535:
+		status_label.text = "Informe uma porta valida entre 1 e 65535."
+		return
+	MultiplayerManager.join_room(address_input.text, port)
+	_show_local_multiplayer()
+
+
+func _close_network_room() -> void:
+	MultiplayerManager.close_room()
+	MultiplayerManager.last_status = "Desconectado"
+	_show_local_multiplayer()
+
+
+func _start_network_duel_from_lobby() -> void:
+	MultiplayerManager.start_duel()
+
+
+func _on_network_status_changed(message: String) -> void:
+	if status_label != null:
+		status_label.text = message
+
+
+func _on_network_lobby_changed(_players: int, _is_host: bool) -> void:
+	if screen_state == "collection" and title_label.text in ["MULTIPLAYER LOCAL", "ENTRAR NA SALA"]:
+		_show_local_multiplayer()
+
+
 func _update_score_label() -> void:
 	score_label.text = "Pontuacao: %d" % score
 
@@ -1261,6 +1441,8 @@ func _responsive_columns(default_columns: int = 2) -> int:
 	var viewport_size: Vector2 = size
 	if viewport_size.x <= 1.0:
 		viewport_size = get_viewport_rect().size
+	if viewport_size.y > viewport_size.x * 1.08:
+		return 1
 	if viewport_size.x < 620.0:
 		return 1
 	if viewport_size.x < 980.0:
@@ -1334,8 +1516,6 @@ func _feature_tile_action(title: String, meta: String) -> String:
 			return "VER FASES"
 		"MULTIPLAYER":
 			return "ENTRAR"
-		"LOCAL":
-			return "CRIAR OU ENTRAR"
 		"CRIAR SALA":
 			return "CRIAR"
 		"ENTRAR":
@@ -1423,6 +1603,7 @@ func _make_icon_button(text: String, callback: Callable) -> Button:
 func _make_label(text: String, size: int, color: Color) -> Label:
 	var label: Label = Label.new()
 	label.text = text
+	label.set_meta("base_font_size", size)
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", color)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1470,7 +1651,7 @@ func _bar_style(fill: Color, border: Color) -> StyleBoxFlat:
 
 func _configure_platform_window() -> void:
 	if OS.has_feature("mobile"):
-		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
+		_apply_mobile_orientation(mobile_orientation)
 	else:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 		DisplayServer.window_set_size(Vector2i(1280, 720))
@@ -1482,13 +1663,18 @@ func _set_mobile_orientation(value: String) -> void:
 	if not OS.has_feature("mobile"):
 		return
 	mobile_orientation = value
+	ScoreStore.set_display_orientation(value)
+	_apply_mobile_orientation(value)
+	_show_orientation_settings()
+
+
+func _apply_mobile_orientation(value: String) -> void:
 	if value == "portrait":
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
 	elif value == "landscape":
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_LANDSCAPE)
 	else:
 		DisplayServer.screen_set_orientation(DisplayServer.SCREEN_SENSOR)
-	_show_orientation_settings()
 
 
 func _resume_game() -> void:
@@ -1761,7 +1947,7 @@ func _season_key() -> String:
 
 
 func _game_over_title_text(new_record: bool) -> String:
-	if gameplay_mode == "survival":
+	if gameplay_mode.begins_with("survival"):
 		return "NOVO RECORDE" if new_record else "FIM DE JOGO"
 	elif score >= current_phase_goal:
 		return "FASE CONCLUIDA"
@@ -1798,6 +1984,7 @@ func _apply_interface_theme() -> void:
 
 
 func _quit_game() -> void:
+	MultiplayerManager.close_room()
 	get_tree().quit()
 
 
@@ -2031,13 +2218,14 @@ func _apply_responsive_layout() -> void:
 		viewport_size = get_viewport_rect().size
 	var shortest: float = minf(viewport_size.x, viewport_size.y)
 	var landscape: bool = viewport_size.x > viewport_size.y
-	var wide: bool = viewport_size.x >= 900.0
+	var wide: bool = landscape and viewport_size.x >= 900.0
+	var portrait_scale: float = 1.8 if not landscape else 1.0
 	var compact: bool = shortest < 430.0
 	var safe_insets: Vector4 = _safe_insets(viewport_size)
 	var horizontal_margin: int = int(clampf(viewport_size.x * 0.04, 12.0, 70.0))
 	var vertical_margin: int = int(clampf(viewport_size.y * 0.022, 10.0, 34.0))
 	var gameplay_layout: bool = screen_state == "game" or screen_state == "game_over"
-	var gameplay_hud_height: float = clampf(shortest * 0.205, 82.0, 96.0)
+	var gameplay_hud_height: float = clampf(shortest * 0.205, 82.0, 150.0 if not landscape else 96.0)
 	var gameplay_hud_y: float = maxf(safe_insets.y + 12.0, viewport_size.y * (0.038 if compact else 0.045))
 	var gameplay_top_margin: float = gameplay_hud_y + gameplay_hud_height + clampf(shortest * 0.035, 12.0, 20.0)
 	main_margin.add_theme_constant_override("margin_left", horizontal_margin)
@@ -2045,7 +2233,7 @@ func _apply_responsive_layout() -> void:
 	main_margin.add_theme_constant_override("margin_top", int(maxf(float(vertical_margin), gameplay_top_margin if gameplay_layout else safe_insets.y + 10.0)))
 	main_margin.add_theme_constant_override("margin_bottom", int(maxf(float(vertical_margin), safe_insets.w + 10.0)))
 
-	var max_width: float = 1320.0 if wide else (980.0 if landscape else 540.0)
+	var max_width: float = 1320.0 if wide else (980.0 if landscape else 1120.0)
 	var root_width: float = minf(viewport_size.x - float(horizontal_margin * 2), max_width)
 	root_box.custom_minimum_size = Vector2(root_width, 0.0)
 	if content_scroll != null:
@@ -2076,42 +2264,45 @@ func _apply_responsive_layout() -> void:
 		body_size = maxi(body_size - 2, 13)
 		button_font_size = maxi(button_font_size - 1, 14)
 		logo_size = maxi(logo_size - 10, 88)
+	button_font_size = int(float(button_font_size) * portrait_scale)
 	_set_label_font(title_label, title_size)
 	_set_label_font(subtitle_label, subtitle_size)
 	_set_label_font(score_label, body_size)
 	_set_label_font(status_label, body_size)
 	menu_logo.custom_minimum_size = Vector2(root_box.custom_minimum_size.x, clampf(float(logo_size) * 1.28, 128.0, 232.0))
 
-	var board_limit_by_width: float = minf(viewport_size.x - float(horizontal_margin * 2), root_box.custom_minimum_size.x * 1.28)
+	var board_limit_by_width: float = minf(viewport_size.x - float(horizontal_margin * 2), root_box.custom_minimum_size.x)
 	var available_game_height: float = viewport_size.y - gameplay_top_margin - safe_insets.w - float(vertical_margin)
-	var board_limit_by_height: float = available_game_height * (0.98 if gameplay_layout else (0.54 if landscape else 0.62))
+	var board_limit_by_height: float = available_game_height * (0.94 if gameplay_layout else (0.54 if landscape else 0.68))
 	var board_min: float = 340.0 if low_height else 410.0
-	var board_max: float = 680.0 if not wide else 820.0
+	var board_max: float = 1080.0 if not landscape else (820.0 if wide else 680.0)
 	if compact:
 		board_min = 320.0
-	var board_width: float = clampf(minf(board_limit_by_width, board_limit_by_height * 1.28), board_min, board_max)
-	var board_height: float = board_width * 0.78
+	var board_aspect: float = 1.18 if landscape else 1.0
+	var board_width: float = clampf(minf(board_limit_by_width, board_limit_by_height * board_aspect), board_min, board_max)
+	var board_height: float = board_width / board_aspect
 	if board_height > board_limit_by_height:
 		board_height = board_limit_by_height
-		board_width = board_height * 1.28
+		board_width = board_height * board_aspect
 	board.custom_minimum_size = Vector2(board_width, board_height)
 
 	var button_width: float = minf(root_box.custom_minimum_size.x, 560.0 if wide else 450.0)
-	var button_height: float = clampf(shortest * (0.125 if low_height else 0.145), 56.0, 82.0)
+	var button_height: float = clampf(shortest * (0.125 if low_height else 0.145), 56.0, 82.0) * (1.25 if not landscape else 1.0)
+	_apply_responsive_label_scale(content_box, portrait_scale)
 	_apply_button_metrics(content_box, button_width, button_height, button_font_size)
 	_apply_button_metrics(action_row, button_width, button_height, button_font_size)
 	if back_button != null:
-		var back_size: float = clampf(shortest * 0.115, 44.0, 58.0)
+		var back_size: float = clampf(shortest * 0.115, 44.0, 96.0 if not landscape else 58.0)
 		back_button.custom_minimum_size = Vector2(back_size, back_size)
 		back_button.add_theme_font_size_override("font_size", int(clampf(back_size * 0.38, 17.0, 22.0)))
 		top_spacer.custom_minimum_size = back_button.custom_minimum_size
 	if options_button != null:
-		var icon_size: float = clampf(shortest * 0.13, 50.0, 62.0)
+		var icon_size: float = clampf(shortest * 0.13, 50.0, 100.0 if not landscape else 62.0)
 		options_button.custom_minimum_size = Vector2(icon_size, icon_size)
 		options_button.position = Vector2(maxf(horizontal_margin * 0.55, safe_insets.x + 10.0), maxf(vertical_margin * 0.65, safe_insets.y + 8.0))
 		options_button.add_theme_font_size_override("font_size", int(clampf(icon_size * 0.34, 16.0, 22.0)))
 	if replay_pattern_button != null:
-		var replay_size: float = clampf(shortest * 0.115, 44.0, 56.0)
+		var replay_size: float = clampf(shortest * 0.115, 44.0, 92.0 if not landscape else 56.0)
 		replay_pattern_button.custom_minimum_size = Vector2(replay_size, replay_size)
 		replay_pattern_button.size = replay_pattern_button.custom_minimum_size
 		replay_pattern_button.position = Vector2(options_button.position.x, options_button.position.y + options_button.custom_minimum_size.y + 10.0)
@@ -2120,7 +2311,7 @@ func _apply_responsive_layout() -> void:
 		in_game_options.position = Vector2(options_button.position.x, options_button.position.y + options_button.custom_minimum_size.y + 10.0)
 		_apply_button_metrics(in_game_options, clampf(shortest * 0.42, 156.0, 196.0), clampf(shortest * 0.112, 46.0, 54.0), int(clampf(shortest * 0.034, 13.0, 15.0)))
 	if hud_panel != null:
-		var hud_width: float = clampf(viewport_size.x * 0.62, 330.0, 460.0)
+		var hud_width: float = clampf(viewport_size.x * 0.72, 330.0, 760.0 if not landscape else 460.0)
 		if viewport_size.x < 520.0:
 			hud_width = clampf(viewport_size.x - 92.0, 268.0, 360.0)
 		hud_panel.custom_minimum_size = Vector2(hud_width, gameplay_hud_height)
@@ -2138,6 +2329,16 @@ func _apply_responsive_layout() -> void:
 func _set_label_font(label: Label, font_size: int) -> void:
 	if label != null:
 		label.add_theme_font_size_override("font_size", font_size)
+
+
+func _apply_responsive_label_scale(node: Node, scale_factor: float) -> void:
+	if node == null:
+		return
+	if node is Label and node.has_meta("base_font_size"):
+		var label: Label = node as Label
+		label.add_theme_font_size_override("font_size", maxi(12, int(float(label.get_meta("base_font_size")) * scale_factor)))
+	for child in node.get_children():
+		_apply_responsive_label_scale(child, scale_factor)
 
 
 func _apply_button_metrics(node: Node, button_width: float, button_height: float, font_size: int) -> void:

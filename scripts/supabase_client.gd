@@ -16,6 +16,7 @@ var user_id: String = ""
 var user_email: String = ""
 var is_anonymous: bool = false
 var last_error: String = ""
+var auth_notice: String = ""
 var syncing: bool = false
 var sync_pending: bool = false
 
@@ -56,6 +57,8 @@ func sign_up(display_name: String, email: String, password: String) -> bool:
 		return false
 	var clean_name: String = display_name.strip_edges()
 	var clean_email: String = email.strip_edges()
+	last_error = ""
+	auth_notice = ""
 	if clean_name == "":
 		last_error = "Informe o nome do usuario."
 		sync_status_changed.emit(last_error)
@@ -71,14 +74,20 @@ func sign_up(display_name: String, email: String, password: String) -> bool:
 		"data": {"display_name": clean_name}
 	})
 	if result.has("error"):
-		last_error = String(result["error"])
+		var signup_error: String = String(result["error"])
+		if _is_confirmation_delivery_error(signup_error):
+			user_email = clean_email
+			auth_notice = "A conta foi criada, mas o Supabase nao conseguiu enviar a confirmacao. Use REENVIAR CONFIRMACAO. Para publicar, configure SMTP proprio no Supabase."
+			sync_status_changed.emit(auth_notice)
+			return true
+		last_error = signup_error
 		sync_status_changed.emit(last_error)
 		return false
 	var access: String = String(result.get("access_token", ""))
 	if access == "":
 		user_email = clean_email
-		last_error = "Conta criada. Enviamos um email de confirmacao para %s. Confirme o email antes de entrar." % clean_email
-		sync_status_changed.emit(last_error)
+		auth_notice = "Conta criada. Enviamos um email de confirmacao para %s. Confirme o email antes de entrar." % clean_email
+		sync_status_changed.emit(auth_notice)
 		return true
 	if not _store_auth_result(result):
 		return false
@@ -87,9 +96,50 @@ func sign_up(display_name: String, email: String, password: String) -> bool:
 	return true
 
 
+func resend_signup_confirmation(email: String) -> bool:
+	if not _require_config():
+		return false
+	var clean_email: String = email.strip_edges()
+	if clean_email == "":
+		last_error = "Informe o email usado no cadastro."
+		return false
+	last_error = ""
+	auth_notice = ""
+	var result: Dictionary = await _auth_request("/resend", {"type": "signup", "email": clean_email})
+	if result.has("error"):
+		last_error = String(result["error"])
+		sync_status_changed.emit(last_error)
+		return false
+	user_email = clean_email
+	auth_notice = "Email de confirmacao reenviado para %s." % clean_email
+	sync_status_changed.emit(auth_notice)
+	return true
+
+
+func request_password_reset(email: String) -> bool:
+	if not _require_config():
+		return false
+	var clean_email: String = email.strip_edges()
+	if clean_email == "":
+		last_error = "Informe seu email para recuperar a senha."
+		return false
+	last_error = ""
+	auth_notice = ""
+	var result: Dictionary = await _auth_request("/recover", {"email": clean_email})
+	if result.has("error"):
+		last_error = String(result["error"])
+		sync_status_changed.emit(last_error)
+		return false
+	auth_notice = "Se houver uma conta para %s, o email de recuperacao foi enviado." % clean_email
+	sync_status_changed.emit(auth_notice)
+	return true
+
+
 func sign_in(email: String, password: String) -> bool:
 	if not _require_config():
 		return false
+	last_error = ""
+	auth_notice = ""
 	var result: Dictionary = await _auth_request("/token?grant_type=password", {
 		"email": email.strip_edges(),
 		"password": password
@@ -109,6 +159,7 @@ func sign_out() -> void:
 	user_id = ""
 	user_email = ""
 	is_anonymous = false
+	auth_notice = ""
 	_save_session()
 	auth_changed.emit()
 	sync_status_changed.emit("Conta desconectada")
@@ -351,6 +402,14 @@ func _extract_error(parsed: Variant, status: int) -> String:
 		if parsed.has("error_description"):
 			return String(parsed["error_description"])
 	return "Erro HTTP %d" % status
+
+
+func _is_confirmation_delivery_error(message: String) -> bool:
+	var lower: String = message.to_lower()
+	return "error sending confirmation email" in lower \
+		or "confirmation email" in lower and "send" in lower \
+		or "email address not authorized" in lower \
+		or "email rate limit" in lower
 
 
 func _load_session() -> void:

@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="0_jetified-godot-lib.template_release-runtime">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/android/build/build/intermediates/external_file_lib_dex_archives/standardRelease/desugarStandardReleaseFileDependencies/0_jetified-godot-lib.template_release-runtime.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
